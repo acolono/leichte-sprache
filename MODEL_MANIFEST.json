@@ -1,7 +1,7 @@
 {
   "version": "models-v1.0",
   "github_release_tag": "models-v1.0",
-  "github_repo": "Acolono/leichte-sprache-rulez",
+  "github_repo": "acolono/leichte-sprache",
   "tarball_name": "models.tar.gz",
   "files": {
     "regeln/abkuerzungen/model/model.safetensors": {
@@ -11,10 +11,6 @@
     "regeln/mehrere_aussagen/model/models/stage_statement_classifier_best/pytorch_model.bin": {
       "sha256": "7302dfa0cd1c4e115238def7b6a96261a65f9c4932b487d466a055c7e7b8d0e8",
       "size_bytes": 436412103
-    },
-    "regeln/personalpronomen/model/best_model.pt": {
-      "sha256": "82e5540dc451cd0a1f99596cfd6c80de5c616dbf71bddf5af15ddcbcd52acd8b",
-      "size_bytes": 266311172
     },
     "regeln/perplexity_saetze/perplexity_model.pkl": {
       "sha256": "80c41bad7931361f5009f2323219c24063361ecdc76f7a629a0af6fe0ec8922d",
