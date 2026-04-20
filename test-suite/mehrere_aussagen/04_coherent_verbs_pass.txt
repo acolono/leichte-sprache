@@ -1,0 +1,4 @@
+# expected: pass
+# description: Semantically coherent verb phrase - should pass
+
+Das Kind lernt Fahrrad fahren.

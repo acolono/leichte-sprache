@@ -1,0 +1,8 @@
+# expected: pass
+# description: Should pass: very short
+
+Das ist gut.
+Ich bin hier.
+Sie kommt.
+Er geht.
+Das Haus ist groß.

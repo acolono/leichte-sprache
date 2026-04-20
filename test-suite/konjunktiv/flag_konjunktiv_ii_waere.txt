@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: konjunktiv ii waere
+
+Wenn ich reich waere, wuerde ich reisen.

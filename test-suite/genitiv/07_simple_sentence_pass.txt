@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple sentence without genitive construction
+
+Die Frau geht in den Park.

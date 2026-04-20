@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: unter vier augen
+
+Das müssen wir unter vier Augen besprechen.
+Sie wollte mit ihm unter vier Augen reden.
+Dieses Gespräch sollte unter vier Augen stattfinden.

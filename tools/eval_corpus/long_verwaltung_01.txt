@@ -1,0 +1,4 @@
+# length: long
+# category: verwaltung
+
+Die Beantragung eines Wohnberechtigungsscheins setzt voraus, dass der Antragsteller die Einkommensgrenzen des Wohnraumförderungsgesetzes nicht überschreitet. Zur Prüfung der Anspruchsberechtigung sind sämtliche Einkommensnachweise der letzten zwölf Monate vorzulegen, einschließlich Lohnabrechnungen, Rentenbescheide und gegebenenfalls Bescheide über den Bezug von Sozialleistungen. Der Antrag kann persönlich bei der zuständigen Wohnungsbauförderungsstelle eingereicht werden. Alternativ besteht die Möglichkeit, die erforderlichen Unterlagen auf dem Postweg einzusenden. Die Bearbeitungsdauer beträgt in der Regel vier bis sechs Wochen. Bei unvollständiger Dokumentation wird der Antragsteller schriftlich zur Nachreichung aufgefordert. Der Wohnberechtigungsschein ist nach Ausstellung ein Jahr lang gültig und berechtigt zum Bezug einer Sozialwohnung im entsprechenden Fördergebiet.

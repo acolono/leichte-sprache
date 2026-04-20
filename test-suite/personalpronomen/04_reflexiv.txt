@@ -1,0 +1,4 @@
+# expected: flag
+# description: Problematic reflexive pronouns
+
+Er fragt sich, ob sie sich das erlauben kann.

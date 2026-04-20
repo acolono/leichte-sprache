@@ -1,0 +1,29 @@
+# Erweiterte Requirements für Leichte Sprache CLI
+# Python 3.11 venv required
+
+# Core NLP dependencies
+spacy>=3.0
+wordfreq
+nltk
+pyphen
+germalemma
+
+# OpenAI API für KI-Integration
+openai>=1.0.0
+
+# Wissenschaftliche und ML-Libraries
+numpy
+scipy
+scikit-learn
+
+# BERT und Transformer-Libraries für regel_bert_komplexitaet.py
+torch>=1.13.0
+transformers>=4.20.0
+
+
+# Nach der Installation das deutsche spaCy-Modell herunterladen:
+# python -m spacy download de_core_news_lg
+
+# Installation der Abhängigkeiten:
+# 1. Python 3.11 venv erstellen: python3.11 -m venv leichte_sprache_venv
+# Venv aktivieren: source leichte_sprache_venv/bin/activate

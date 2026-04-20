@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: nominalization
+
+Die Durchführung der Maßnahmen zur Verbesserung der Lebensqualität der Bewohner unter Berücksichtigung der finanziellen Rahmenbedingungen und der zeitlichen Einschränkungen erfordert eine sorgfältige Planung und Koordination aller beteiligten Stellen.

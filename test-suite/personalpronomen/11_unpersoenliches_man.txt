@@ -1,0 +1,4 @@
+# expected: flag
+# description: Impersonal pronoun "man" should be avoided in Leichte Sprache
+
+Am Anfang dachte man: Die Lawine erreichte die Piste.

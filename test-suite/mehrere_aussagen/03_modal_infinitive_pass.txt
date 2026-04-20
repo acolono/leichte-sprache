@@ -1,0 +1,4 @@
+# expected: pass
+# description: Modal verb with infinitive - should pass (semantically one action)
+
+Ich muss heute einkaufen gehen.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Prepositional genitive with "trotz" - "trotz des Protests"
+
+Trotz des Protests wurde das Gesetz beschlossen.

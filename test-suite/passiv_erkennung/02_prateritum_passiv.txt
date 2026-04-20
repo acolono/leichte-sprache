@@ -1,0 +1,4 @@
+# expected: flag
+# description: Past tense passive with "wurde gebaut"
+
+Das Haus wurde im Jahr 1990 gebaut.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Technical jargon but simple structure - vocabulary is handled by komplexitaet rule
+
+Die Implementation der systemischen Infrastrukturoptimierung erfordert eine umfassende Evaluierung der prozessualen Rahmenbedingungen.

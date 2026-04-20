@@ -1,0 +1,4 @@
+# expected: flag
+# description: Perfect passive with "ist erledigt worden"
+
+Die Arbeit ist gestern erledigt worden.

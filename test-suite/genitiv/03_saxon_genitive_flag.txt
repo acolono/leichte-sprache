@@ -1,0 +1,4 @@
+# expected: flag
+# description: Saxon genitive with proper name - "Peters Auto"
+
+Peters Auto steht vor dem Haus.

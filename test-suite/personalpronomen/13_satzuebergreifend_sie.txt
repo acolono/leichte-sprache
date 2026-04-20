@@ -1,0 +1,5 @@
+# expected: flag
+# description: Cross-sentence "sie" with multiple noun referents in previous sentence
+
+In Lateinamerika ist die Banane sehr wichtig.
+Sie bringt den Leuten Geld.

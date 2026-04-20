@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: fuenfzig
+
+Der Mann ist fünfzig Jahre alt.
+Fünfzig Euro kosten die Schuhe.
+Es kamen fünfzig Menschen zur Veranstaltung.

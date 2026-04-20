@@ -1,0 +1,4 @@
+# expected: flag
+# description: Foreign word "Administration" should be flagged as complex
+
+Die Administration hat neue Regeln beschlossen.

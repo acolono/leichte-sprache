@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence with "niemand" negation - should flag
+
+Niemand war zu Hause.

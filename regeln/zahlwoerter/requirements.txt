@@ -1,0 +1,29 @@
+# Dependencies für BERT-basierte Zahlwörter-Regel
+# Verwendet feingetuntes BERT Token-Classification Modell für präzise Zahlwörter-Erkennung
+
+# Core Dependencies
+spacy>=3.0
+
+# BERT / Deep Learning
+torch>=1.13.0
+transformers>=4.20.0
+
+# Model Distribution
+huggingface-hub>=0.16.0
+
+# Optional: Beschleunigung (nur für Nvidia GPUs)
+# accelerate>=0.20.0
+
+# Nach Installation:
+# ====================
+# 1. spaCy-Modell herunterladen:
+#    python -m spacy download de_core_news_lg
+#
+# 2. BERT-Modell wird automatisch von Hugging Face heruntergeladen
+#    beim ersten Aufruf der Regel (siehe config.py für Konfiguration)
+#
+# Alternativ: Lokales Modell verwenden (Development)
+#    Pfad in regeln/zahlwoerter/config.py konfigurieren (LOCAL_MODEL_PATHS)
+#
+# 3. Für Hugging Face Upload (optional, nur für Modell-Maintainer):
+#    Siehe HUGGINGFACE_UPLOAD_ANLEITUNG.md

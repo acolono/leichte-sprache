@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: medium complex
+
+Obwohl die Situation schwierig war und viele Herausforderungen bestanden, gelang es dem Team, eine Lösung zu finden, die alle Beteiligten zufriedenstellte.

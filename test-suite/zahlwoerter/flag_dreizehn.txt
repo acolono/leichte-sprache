@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: dreizehn
+
+Es waren dreizehn Personen im Raum.
+Dreizehn Kinder spielen auf dem Schulhof.
+Ich habe dreizehn Äpfel gekauft.

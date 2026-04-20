@@ -1,0 +1,4 @@
+# expected: pass
+# description: Dative construction instead of genitive - "von dem Mann"
+
+Das Buch von dem Mann ist interessant.

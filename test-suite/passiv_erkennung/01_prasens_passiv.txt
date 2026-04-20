@@ -1,0 +1,4 @@
+# expected: flag
+# description: Present tense passive with "wird geliefert"
+
+Das Paket wird heute geliefert.

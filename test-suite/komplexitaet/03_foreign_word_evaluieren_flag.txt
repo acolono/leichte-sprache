@@ -1,0 +1,4 @@
+# expected: flag
+# description: Foreign word "evaluieren" should be flagged as complex
+
+Die Ergebnisse werden wir evaluieren.

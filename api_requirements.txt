@@ -1,0 +1,64 @@
+# FastAPI-Requirements für Leichte Sprache API
+# Python 3.11 empfohlen
+
+# === FastAPI Core Dependencies ===
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# === NLP Core Dependencies ===
+spacy>=3.0
+wordfreq
+nltk
+pyphen
+
+# === Scientific/ML Libraries ===
+numpy
+scipy
+scikit-learn
+
+# === Optional: Enhanced Features ===
+# Für erweiterte Logging-Funktionalität
+loguru
+
+# Für Prometheus Metrics (optional)
+prometheus-client
+
+# Für OpenAPI/Swagger erweiterte Features
+python-multipart
+
+# === Installation Instructions ===
+# 1. Python 3.11 Virtual Environment erstellen:
+#    python3.11 -m venv leichte_sprache_api_venv
+#
+# 2. Virtual Environment aktivieren:
+#    source leichte_sprache_api_venv/bin/activate  # macOS/Linux
+#    # ODER für Windows:
+#    # leichte_sprache_api_venv\Scripts\activate
+#
+# 3. Dependencies installieren:
+#    pip install -r api_requirements.txt
+#
+# 4. SpaCy deutsches Modell herunterladen:
+#    python -m spacy download de_core_news_lg
+#
+# 5. API starten:
+#    python api_main.py
+#    # ODER für Production:
+#    # uvicorn api_main:app --host 0.0.0.0 --port 8000
+#
+# 6. API testen:
+#    # Swagger UI: http://localhost:8000/docs
+#    # ReDoc: http://localhost:8000/redoc
+#    # Health Check: http://localhost:8000/health
+
+# === Production Deployment (zusätzliche Dependencies) ===
+# gunicorn  # Für Production WSGI Server
+# python-dotenv  # Für Umgebungsvariablen aus .env-Dateien
+
+# === Development Tools (optional) ===
+# pytest>=7.0  # Für Unit Tests
+# httpx>=0.25  # Für API Testing
+# black  # Code Formatter
+# flake8  # Code Linter
+# mypy  # Type Checker

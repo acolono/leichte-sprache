@@ -1,0 +1,4 @@
+# expected: flag
+# description: Slashes are not allowed in Leichte Sprache
+
+Bitte senden Sie den Brief an Herrn/Frau Mueller.

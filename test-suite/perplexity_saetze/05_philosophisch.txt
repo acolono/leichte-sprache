@@ -1,0 +1,4 @@
+# expected: flag
+# description: Long subject-verb distance makes this structurally complex
+
+Die philosophische Reflexion über ontologische Fundierungen der epistemologischen Paradigmen erfordert differenzierte Analysen.

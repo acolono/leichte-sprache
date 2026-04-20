@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: simple narrative
+
+Maria geht in den Laden.
+Sie kauft Brot und Milch.
+Dann geht sie nach Hause.
+Sie macht das Abendessen.

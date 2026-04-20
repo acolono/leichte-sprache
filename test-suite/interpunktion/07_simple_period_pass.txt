@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple sentence with period is allowed
+
+Das Wetter ist heute schoen.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Short sentence should pass
+
+Das Haus ist groß.

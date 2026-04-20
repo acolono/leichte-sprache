@@ -1,0 +1,4 @@
+# expected: flag
+# description: Two distinct actions connected with "und" - should flag
+
+Peter geht einkaufen und besucht seine Mutter.

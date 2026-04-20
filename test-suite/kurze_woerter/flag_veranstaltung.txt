@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: veranstaltung
+
+Die Veranstaltungsorganisation war kompliziert.

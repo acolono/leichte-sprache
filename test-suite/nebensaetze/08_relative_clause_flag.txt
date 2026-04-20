@@ -1,0 +1,4 @@
+# expected: flag
+# description: Relative clause with "der" as relative pronoun - should flag
+
+Das ist der Mann, der mir geholfen hat.

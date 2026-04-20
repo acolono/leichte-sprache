@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: hundert
+
+Hundert Menschen warten in der Schlange.
+Das kostet hundert Euro.
+Die Firma hat hundert Mitarbeiter.

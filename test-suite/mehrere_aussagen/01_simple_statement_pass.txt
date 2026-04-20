@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple sentence with one action - should pass
+
+Der Mann geht in den Park.

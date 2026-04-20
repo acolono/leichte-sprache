@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: simple present
+
+Ich gehe in die Schule.

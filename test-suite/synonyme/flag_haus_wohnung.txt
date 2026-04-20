@@ -1,0 +1,5 @@
+# expected: pass
+# description: Haus and Wohnung are different concepts not synonyms
+
+Ich wohne in einem Haus.
+Die Wohnung ist im zweiten Stock.

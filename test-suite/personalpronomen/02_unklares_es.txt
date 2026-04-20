@@ -1,0 +1,5 @@
+# expected: flag
+# description: Unclear "es" at sentence start without clear reference
+
+Es ist wichtig.
+Man muss es beachten.

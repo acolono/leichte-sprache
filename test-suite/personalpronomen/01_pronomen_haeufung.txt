@@ -1,0 +1,4 @@
+# expected: flag
+# description: Too many pronouns in one sentence (more than 3)
+
+Er gibt es ihr und sie nimmt es von ihm.

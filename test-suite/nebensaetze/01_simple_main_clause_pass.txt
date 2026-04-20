@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple main clause with no subordination - should pass
+
+Das Wetter ist heute schoen.

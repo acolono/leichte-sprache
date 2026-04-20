@@ -1,0 +1,4 @@
+# expected: flag
+# description: Technical word "Kompetenz" should be flagged as complex
+
+Diese Kompetenz ist sehr wichtig.

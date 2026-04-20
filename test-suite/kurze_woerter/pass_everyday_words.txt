@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: everyday words
+
+Der Hund spielt im Garten.

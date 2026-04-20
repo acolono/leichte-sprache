@@ -1,0 +1,4 @@
+# expected: flag
+# description: Accumulation of foreign loan words
+
+Das Management implementiert innovative Strategien zur Optimierung der Performance und Effizienz.

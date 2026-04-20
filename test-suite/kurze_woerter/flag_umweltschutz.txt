@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: umweltschutz
+
+Der Umweltschutzbeauftragte kontrolliert die Einhaltung.

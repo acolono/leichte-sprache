@@ -1,0 +1,4 @@
+# length: short
+# category: verwaltung
+
+Gemäß der Verwaltungsvorschrift ist die Antragstellung unter Berücksichtigung sämtlicher Dokumentationspflichten fristgerecht einzureichen.

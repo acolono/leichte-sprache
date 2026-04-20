@@ -1,0 +1,4 @@
+# expected: pass
+# description: Pronoun in first sentence has no previous context to check
+
+Sie geht nach Hause.

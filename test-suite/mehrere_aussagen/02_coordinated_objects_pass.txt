@@ -1,0 +1,4 @@
+# expected: pass
+# description: Coordinated objects with single verb - should pass (only one action)
+
+Maria kauft Brot und Milch.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Technical word "Methodologie" should be flagged as complex
+
+Die Methodologie ist sehr kompliziert.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: two part compound
+
+Die Haustuer ist offen.

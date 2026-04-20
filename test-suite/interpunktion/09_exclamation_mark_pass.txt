@@ -1,0 +1,4 @@
+# expected: pass
+# description: Exclamation mark is allowed in Leichte Sprache
+
+Das ist wichtig!

@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: zwanzig
+
+Zwanzig Kinder sind in der Klasse.
+Das Buch hat zwanzig Kapitel.
+In zwanzig Minuten beginnt der Film.

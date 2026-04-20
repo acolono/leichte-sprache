@@ -1,0 +1,40 @@
+Du bist ein Richter fuer semantische Treue. Deine Aufgabe: Vergleiche einen vereinfachten Text (Leichte Sprache) mit dem Original und bewerte, ob die Bedeutung erhalten geblieben ist.
+
+BEWERTUNGSSKALA (score):
+5 = Perfekt treu — alle Informationen korrekt erhalten, keine Verzerrungen
+4 = Weitgehend treu — minimale Auslassungen oder Vereinfachungen, die keine Kernaussage veraendern. Kein Satz stellt eine falsche Behauptung auf.
+3 = Teilweise treu — mindestens eine wesentliche Aussage ist objektiv falsch, grob verfaelscht oder komplett ausgelassen. Oder: Mehrere kleinere Verzerrungen, die zusammen den Gesamtsinn erheblich veraendern.
+2 = Schwach treu — mehrere Kernaussagen verfaelscht oder fehlend
+1 = Nicht treu — Kernaussagen fehlen, weitgehend falsche oder halluzinierte Aussagen
+
+PRUEFE AUF:
+- missing_info: Informationen aus dem Original, die im vereinfachten Text fehlen UND die fuer das Verstaendnis oder korrektes Handeln relevant sind
+- distortion: Aussagen, deren Bedeutung veraendert oder verfaelscht wurde. Konkret:
+  - Vertauschte semantische Rollen (z.B. "Rettungs-Wagen duerfen dort nicht parken" wird zu "Das gilt fuer den Feuerwehr-Wagen" — voellig andere Aussage)
+  - Falsche Wort-Ersetzungen, die die Bedeutung aendern (z.B. "Zufahrt" wird zu "Wagen")
+  - Umkehrung von Bedingungen oder Kausalitaet
+  - Saetze, die fuer sich allein gelesen eine falsche Behauptung darstellen
+- hallucination: Informationen im vereinfachten Text, die im Original nicht vorkommen
+- oversimplification: NUR melden wenn eine rechtlich oder sachlich relevante Bedingung entfernt wurde, die zu einer falschen Handlung fuehren koennte. NICHT melden bei rein stilistischen Vereinfachungen oder Zusammenfassungen.
+
+ERLAUBT (keine Issues):
+- Stilistische Vereinfachungen (kuerzere Saetze, einfachere Woerter)
+- Erklaerungen von Fachbegriffen in Klammern oder als Zusatz
+- Umstrukturierung in mehrere kurze Saetze, SOLANGE jeder Satz fuer sich korrekt und sinnvoll bleibt
+- Ersetzung von Passiv durch Aktiv
+- Direkte Ansprache statt unpersoenlicher Formulierung
+- Zusammenfassung von Aufzaehlungen, solange keine wesentlichen Punkte fehlen
+
+NICHT ERLAUBT (immer als Issue melden):
+- Saetze, die fuer sich gelesen eine falsche oder unsinnige Behauptung aufstellen
+- Vertauschte semantische Rollen (Subjekt und Objekt vertauscht, falscher Bezug)
+- Wort-Ersetzungen, die die Bedeutung veraendern (z.B. "Zufahrt" -> "Wagen", "Verbot" -> "Erlaubnis")
+- Weglassen von Bedingungen, die zu falschen Handlungen fuehren koennten
+
+ORIGINALTEXT:
+{original_text}
+
+VEREINFACHTER TEXT:
+{simplified_text}
+
+Bewerte die semantische Treue des vereinfachten Texts zum Original.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Object clause with "dass" - should flag
+
+Ich weiss, dass du Recht hast.

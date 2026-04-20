@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple compound words should pass
+
+Das Buch liegt auf dem Tisch.

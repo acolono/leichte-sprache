@@ -1,0 +1,7 @@
+# Dependencies für Upassiv_erkennung-Regel
+# Basis-Dependencies für spaCy-basierte Regelprüfung
+
+spacy>=3.0
+
+# Nach Installation muss das deutsche spaCy-Modell heruntergeladen werden:
+# python -m spacy download de_core_news_lg

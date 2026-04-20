@@ -1,0 +1,5 @@
+# expected: pass
+# description: Clear pronoun with single referent
+
+Der Mann geht nach Hause.
+Er ist muede.

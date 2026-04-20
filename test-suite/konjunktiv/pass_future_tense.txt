@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: future tense
+
+Wir werden morgen kommen.

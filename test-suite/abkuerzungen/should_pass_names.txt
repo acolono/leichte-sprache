@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: names
+
+Maria und Thomas gehen heute einkaufen. Sie kaufen Brot und Milch.

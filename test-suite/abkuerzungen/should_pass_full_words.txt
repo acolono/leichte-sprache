@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: full words
+
+Doktor Mueller ist Ihr Ansprechpartner. Professor Schmidt haelt einen Vortrag.

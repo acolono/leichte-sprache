@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: digits
+
+Es waren 13 Personen im Raum.
+Der Mann ist 50 Jahre alt.
+Das kostet 100 Euro.
+In 20 Minuten beginnt der Film.

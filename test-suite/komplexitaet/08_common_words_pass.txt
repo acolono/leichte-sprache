@@ -1,0 +1,4 @@
+# expected: pass
+# description: Common German words should pass
+
+Das Kind spielt im Garten.

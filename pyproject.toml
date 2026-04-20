@@ -1,0 +1,87 @@
+[project]
+name = "leichte-sprache-rulez"
+version = "0.2.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.40.0",
+    "de-core-news-lg==3.8.0",
+    "fastapi>=0.104.1",
+    "german-compound-splitter",
+    "germalemma>=0.1.3",
+    "loguru>=0.7.3",
+    "mistralai",
+    "nltk>=3.9.2",
+    "numpy>=2.0.0",
+    "ollama",
+    "openai>=1.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-ai>=1.0,<2.0",
+    "pyphen>=0.17.2",
+    "python-multipart>=0.0.20",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.16.3",
+    "spacy>=3.8.0",
+    "torch>=1.13.0",
+    "transformers>=4.20.0",
+    "typer>=0.20.0",
+    "uvicorn[standard]>=0.24.0",
+    "wordfreq>=3.1.1",
+    "datasets>=4.8.4",
+    "seqeval>=1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+    "pytest-env>=1.6.0",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.15.7",
+]
+
+[tool.setuptools]
+py-modules = ["api_main", "analysis_service"]
+
+[tool.setuptools.packages.find]
+include = ["regeln*"]
+
+[tool.setuptools.package-data]
+"*" = ["model/*", "model/**/*", "data/*", "data/**/*", "*.pkl", "*.json"]
+
+[[tool.uv.index]]
+name = "spacy-models"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+de-core-news-lg = { url = "https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl" }
+german-compound-splitter = { git = "https://github.com/repodiac/german_compound_splitter" }
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B"]
+ignore = ["N802", "N806", "N812", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["regeln", "tools", "analysis_service", "config"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["test-suite", "tests"]
+pythonpath = ["."]
+markers = [
+    "integration: Integration tests hitting full API pipeline",
+    "llm: Tests requiring real LLM API calls (slow, needs API keys)",
+    "slow: Tests that take more than 10 seconds",
+]
+timeout = 30
+env = [
+    "LOG_LEVEL=WARNING",
+]

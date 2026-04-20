@@ -1,0 +1,4 @@
+# expected: pass
+# description: Coordinating conjunction (aber) between clauses - should pass
+
+Er kommt, aber sie geht.

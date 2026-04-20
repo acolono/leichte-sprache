@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple German words should pass
+
+Der Mann geht nach Hause.

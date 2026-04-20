@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: digitalisierung
+
+Die Digitalisierungsstrategien werden diskutiert.

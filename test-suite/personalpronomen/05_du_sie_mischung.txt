@@ -1,0 +1,5 @@
+# expected: pass
+# description: Consistent Sie address form
+
+Sie koennen das Formular ausfuellen.
+Sie muessen es dann abgeben.

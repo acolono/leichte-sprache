@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: short sentence
+
+Ich lese ein Buch.

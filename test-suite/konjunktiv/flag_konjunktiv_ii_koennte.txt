@@ -1,0 +1,4 @@
+# expected: flag
+# description: Konjunktiv II with könnte should be flagged
+
+Könnte ich bitte etwas Wasser haben?

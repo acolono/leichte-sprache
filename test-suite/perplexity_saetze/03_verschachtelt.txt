@@ -1,0 +1,4 @@
+# expected: flag
+# description: Deeply nested subordinate clauses
+
+Der Antrag, der von dem Beamten, welcher fuer die Abteilung, die sich mit Genehmigungen befasst, zustaendig ist, bearbeitet wurde, liegt vor.

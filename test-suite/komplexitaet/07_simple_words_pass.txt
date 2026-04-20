@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple everyday words should pass
+
+Die Frau geht in den Laden.

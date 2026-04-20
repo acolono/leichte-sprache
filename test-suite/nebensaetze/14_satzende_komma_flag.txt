@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence ending with comma instead of period - should flag
+
+Liebe Freunde von Bananen,

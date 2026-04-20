@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: dr
+
+Dr. Mueller ist Ihr Ansprechpartner fuer medizinische Fragen.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: simple
+
+Das ist ein einfacher Text ohne schwierige Woerter.

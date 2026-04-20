@@ -1,0 +1,10 @@
+# Dependencies für Abkürzungen-BERT-Regel
+# Verwendet BERT-Modell für hochpräzise Abkürzungserkennung
+
+spacy>=3.0
+torch>=1.13.0
+transformers>=4.20.0
+
+# Nach Installation:
+# 1. spaCy-Modell herunterladen: python -m spacy download de_core_news_lg
+# 2. BERT-Modell muss im Ordner model/ liegen (siehe README.md)

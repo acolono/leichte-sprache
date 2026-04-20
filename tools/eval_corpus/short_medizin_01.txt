@@ -1,0 +1,4 @@
+# length: short
+# category: medizin
+
+Die prophylaktische Immunisierung sollte präferentiell im Herbst durchgeführt werden, um eine adäquate Antikörperbildung zu gewährleisten.

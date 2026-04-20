@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: simple words
+
+Das Haus ist gross.

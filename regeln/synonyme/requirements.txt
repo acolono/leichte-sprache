@@ -1,0 +1,8 @@
+# Dependencies für Synonyme-Regel
+# Verwendet spaCy + wordfreq für Synonym-Analyse
+
+spacy>=3.0
+wordfreq>=3.1.1
+
+# Nach Installation muss das deutsche spaCy-Modell heruntergeladen werden:
+# python -m spacy download de_core_news_lg

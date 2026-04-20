@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: institution
+
+Die Institution bietet viele Hilfsangebote an.

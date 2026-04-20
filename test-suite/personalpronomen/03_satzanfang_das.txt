@@ -1,0 +1,5 @@
+# expected: pass
+# description: Das at sentence start is commonly accepted
+
+Das ist ein Buch.
+Das Buch ist rot.

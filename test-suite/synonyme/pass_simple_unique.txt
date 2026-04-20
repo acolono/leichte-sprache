@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: simple unique
+
+Der Tisch ist groß.
+Der Stuhl ist klein.
+Die Lampe leuchtet.
+Das Bett ist weich.

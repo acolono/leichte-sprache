@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: konjunktiv i sei
+
+Er sagte, er sei krank.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: nested clauses
+
+Der Mann, der gestern im Supermarkt, welcher an der Hauptstraße liegt, eingekauft hat, während seine Frau zu Hause geblieben ist, weil sie krank war, hat vergessen, die Milch mitzubringen, obwohl sie auf dem Einkaufszettel stand.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Concrete simple words
+
+Der Mann geht.

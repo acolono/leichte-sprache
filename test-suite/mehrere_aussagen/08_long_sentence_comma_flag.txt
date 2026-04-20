@@ -1,0 +1,4 @@
+# expected: flag
+# description: Long sentence with comma separating different actions - should flag
+
+Das Kind spielt im Garten, die Eltern trinken Kaffee.

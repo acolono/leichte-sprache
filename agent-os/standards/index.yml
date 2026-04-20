@@ -1,0 +1,33 @@
+# Agent OS Standards Index
+
+api:
+  endpoint-docs:
+    description: Required summary, description, and responses on every endpoint decorator
+  error-handling:
+    description: HTTPException patterns, status codes, and German error messages
+  provider-validation:
+    description: LLM provider prerequisite checks (key, package, model)
+  pydantic-models:
+    description: English field names with German descriptions and examples
+
+rules:
+  module-structure:
+    description: Required 4-file layout and boilerplate templates for rule modules
+  pruefe-regel-interface:
+    description: Function signature, return format, and conventions for pruefe_regel
+  standalone-testing:
+    description: Inline __main__ testing block pattern for quick rule iteration
+  violation-messages:
+    description: German error message format with quoted text and Besser suggestions
+
+pipeline:
+  analyzer-singleton:
+    description: Lazy singleton pattern for LeichteSpracheAnalyzer and spaCy model
+  issue-format:
+    description: Issue dict structure with rule_id, text, message, start, end
+  response-structure:
+    description: Success and error response shapes from analyse_text()
+
+testing:
+  test-conventions:
+    description: Test file format, naming, organization, and runner commands

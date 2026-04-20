@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: flinte ins korn
+
+Nach den vielen Rückschlägen wollte er die Flinte ins Korn werfen.
+Er hat einfach aufgegeben und die Flinte ins Korn geworfen.
+Man sollte nicht gleich die Flinte ins Korn werfen, wenn es schwierig wird.

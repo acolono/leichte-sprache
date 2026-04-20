@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: daily routine
+
+Ich stehe um 7 Uhr auf.
+Ich frühstücke.
+Dann gehe ich zur Arbeit.
+Am Abend lese ich ein Buch.

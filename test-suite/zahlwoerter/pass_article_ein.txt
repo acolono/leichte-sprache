@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: article ein
+
+Das ist ein Haus.
+Ich sehe ein Auto.
+Er hat ein Buch.
+Sie kauft ein Brot.

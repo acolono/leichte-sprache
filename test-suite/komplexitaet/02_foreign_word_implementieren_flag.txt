@@ -1,0 +1,4 @@
+# expected: flag
+# description: Foreign word "implementieren" should be flagged as complex
+
+Wir wollen das System implementieren.

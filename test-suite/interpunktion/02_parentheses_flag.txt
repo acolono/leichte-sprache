@@ -1,0 +1,4 @@
+# expected: flag
+# description: Parentheses are not allowed in Leichte Sprache
+
+Der Mann (ein Arzt) hilft den Menschen.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Holzweg not in idiom detection list
+
+Er geht auf dem Holzweg spazieren.

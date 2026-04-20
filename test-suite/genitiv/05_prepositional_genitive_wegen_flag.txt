@@ -1,0 +1,4 @@
+# expected: flag
+# description: Prepositional genitive with "wegen" - "wegen des Regens"
+
+Wegen des Regens bleiben wir zu Hause.

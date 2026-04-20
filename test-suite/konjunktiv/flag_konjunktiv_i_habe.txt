@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: konjunktiv i habe
+
+Sie meinte, sie habe keine Zeit.

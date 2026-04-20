@@ -1,0 +1,4 @@
+# length: medium
+# category: alltag
+
+Um den öffentlichen Personennahverkehr nutzen zu können, benötigen Sie eine gültige Fahrkarte. Monatskarten können an den Automaten an den Haltestellen oder über die App erworben werden. Schwarzfahren wird mit einem erhöhten Beförderungsentgelt von 60 Euro bestraft. Ermäßigungen gelten für Schüler, Studenten und Rentner.

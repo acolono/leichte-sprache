@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: literal body
+
+Ich wasche meine Hände.
+Der Kopf tut mir weh.
+Sie hat schöne Augen.
+Er hebt die Hand.

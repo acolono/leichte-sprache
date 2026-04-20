@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: common loan
+
+Ich fahre mit dem Auto zum Hotel. Das Taxi wartet schon.

@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: consistent words
+
+Ich habe ein Auto.
+Das Auto ist blau.
+Mein Auto fährt gut.
+Ich wasche mein Auto.

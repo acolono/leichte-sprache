@@ -1,0 +1,4 @@
+# expected: pass
+# description: Basic vocabulary should pass complexity check
+
+Der Mann kauft Brot im Laden.

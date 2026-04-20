@@ -1,0 +1,5 @@
+# expected: pass
+# description: Firma and Unternehmen are different concepts not synonyms
+
+Die Firma macht Schuhe.
+Das Unternehmen ist in Berlin.

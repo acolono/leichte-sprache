@@ -1,0 +1,4 @@
+# expected: pass
+# description: Complex active sentence with multiple clauses
+
+Die Frau geht in den Laden und kauft Obst.

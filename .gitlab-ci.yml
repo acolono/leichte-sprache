@@ -1,0 +1,141 @@
+# GitLab CI Pipeline for Leichte Sprache Rulez Package
+# Builds Python wheel and source distribution artifacts
+
+stages:
+  - test
+  - build
+  - docker
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.cache/uv"
+  PYTHON_VERSION: "3.12"
+
+# Cache pip and uv downloads between pipeline runs
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .cache/pip
+    - .cache/uv
+    - .venv/
+
+# Test Job - Run tests before building
+test:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    # Install system dependencies
+    - apt-get update && apt-get install -y --no-install-recommends gcc g++ make
+    # Install uv package manager
+    - pip install --upgrade pip uv
+    # Create virtual environment and install dependencies
+    - uv venv .venv
+    - source .venv/bin/activate
+    - uv sync
+    # Install package in editable mode (makes regeln module importable)
+    - uv pip install -e .
+    # Download spaCy German model
+    - uv run python -m spacy download de_core_news_lg
+  script:
+    # Run test suite
+    - uv run python test-suite/test_runner.py
+  artifacts:
+    when: always
+    paths:
+      - test-suite/
+    expire_in: 7 days
+  only:
+    - branches
+    - merge_requests
+  # Allow failure for now since tests might need adjustments
+  allow_failure: true
+
+# Build Job - Create package artifacts
+build:
+  stage: build
+  image: python:${PYTHON_VERSION}-alpine
+  before_script:
+    # Install build tools and dependencies
+    - apk add --no-cache gcc musl-dev libffi-dev
+    # Install uv for faster package building
+    - pip install --upgrade pip uv
+  script:
+    # Build the package
+    - uv build
+    # List built artifacts
+    - ls -lh dist/
+    # Verify package contents
+    - unzip -l dist/leichte_sprache_rulez-*.whl | head -30
+  artifacts:
+    name: "leichte-sprache-rulez-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - dist/*.whl
+      - dist/*.tar.gz
+    expire_in: 30 days
+  only:
+    - main
+    - master
+    - tags
+    - /^release\/.*$/
+
+# Release Job - Create GitLab release with artifacts (only on tags)
+release:
+  stage: build
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - build
+  script:
+    - echo "Creating release for ${CI_COMMIT_TAG}"
+  release:
+    tag_name: "$CI_COMMIT_TAG"
+    description: "Release $CI_COMMIT_TAG - Deutsche Textanalyse für Leichte Sprache"
+    assets:
+      links:
+        - name: "Python Wheel Package"
+          url: "${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/file/dist/leichte_sprache_rulez-${CI_COMMIT_TAG}-py3-none-any.whl"
+        - name: "Source Distribution"
+          url: "${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/file/dist/leichte_sprache_rulez-${CI_COMMIT_TAG}.tar.gz"
+  only:
+    - tags
+
+# Optional: Deploy to PyPI or GitLab Package Registry
+# Uncomment and configure when ready to publish
+# deploy:pypi:
+#   stage: deploy
+#   image: python:${PYTHON_VERSION}-slim
+#   needs:
+#     - build
+#   before_script:
+#     - pip install --upgrade pip twine
+#   script:
+#     - twine upload dist/*
+#   only:
+#     - tags
+#   when: manual
+#   environment:
+#     name: pypi
+#     url: https://pypi.org/project/leichte-sprache-rulez/
+
+# Docker Job - Build and push Docker image to GitLab Container Registry
+docker:
+  stage: docker
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" -t "$CI_REGISTRY_IMAGE:latest" .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+  only:
+    - main
+    - master
+    - tags
+
+# Notes:
+# 1. Tests require spaCy model (~500MB) - consider caching
+# 2. Adjust 'only' rules based on your branching strategy
+# 3. Set TWINE_USERNAME and TWINE_PASSWORD as CI/CD variables for PyPI deployment

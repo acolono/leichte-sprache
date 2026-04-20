@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: consistent firma
+
+Die Firma ist groß.
+Die Firma hat viele Mitarbeiter.
+Die Firma macht Autos.
+Die Firma ist bekannt.

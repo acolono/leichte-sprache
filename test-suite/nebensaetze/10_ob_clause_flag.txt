@@ -1,0 +1,4 @@
+# expected: flag
+# description: Subordinate clause with "ob" (whether) - should flag
+
+Ich weiss nicht, ob er heute kommt.

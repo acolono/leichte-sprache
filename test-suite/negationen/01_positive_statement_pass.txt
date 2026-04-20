@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple positive statement with no negation - should pass
+
+Das Wetter ist schoen.

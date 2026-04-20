@@ -1,0 +1,4 @@
+# expected: pass
+# description: Nagel auf Kopf not in idiom detection list
+
+Der Nagel ist auf dem Tisch.

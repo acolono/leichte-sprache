@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple accusative sentence without genitive
+
+Ich kaufe das Brot im Laden.

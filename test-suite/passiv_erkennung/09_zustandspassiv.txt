@@ -1,0 +1,4 @@
+# expected: pass
+# description: Stative passive "ist geoeffnet" - typically not flagged
+
+Das Geschaeft ist geoeffnet.

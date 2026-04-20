@@ -1,0 +1,4 @@
+# expected: pass
+# description: Very simple Leichte Sprache
+
+Das ist gut.

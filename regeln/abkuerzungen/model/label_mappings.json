@@ -1,0 +1,17 @@
+{
+  "label_list": [
+    "B-ABK",
+    "I-ABK",
+    "O"
+  ],
+  "label2id": {
+    "B-ABK": 0,
+    "I-ABK": 1,
+    "O": 2
+  },
+  "id2label": {
+    "0": "B-ABK",
+    "1": "I-ABK",
+    "2": "O"
+  }
+}

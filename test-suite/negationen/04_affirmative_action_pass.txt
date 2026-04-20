@@ -1,0 +1,4 @@
+# expected: pass
+# description: Affirmative action sentence - should pass
+
+Ich helfe dir gerne.

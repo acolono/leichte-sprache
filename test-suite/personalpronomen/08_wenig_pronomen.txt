@@ -1,0 +1,5 @@
+# expected: pass
+# description: Few pronouns with clear text
+
+Der Arzt hilft dem Patienten.
+Der Patient ist dankbar.

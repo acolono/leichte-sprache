@@ -1,0 +1,82 @@
+{
+  "person": {
+    "label_to_id": {
+      "NONE": 0,
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "id_to_label": {
+      "0": "NONE",
+      "1": "1",
+      "2": "2",
+      "3": "3"
+    },
+    "num_classes": 4
+  },
+  "gender": {
+    "label_to_id": {
+      "NONE": 0,
+      "Fem": 1,
+      "Masc": 2,
+      "Neut": 3
+    },
+    "id_to_label": {
+      "0": "NONE",
+      "1": "Fem",
+      "2": "Masc",
+      "3": "Neut"
+    },
+    "num_classes": 4
+  },
+  "number": {
+    "label_to_id": {
+      "NONE": 0,
+      "Plur": 1,
+      "Sing": 2
+    },
+    "id_to_label": {
+      "0": "NONE",
+      "1": "Plur",
+      "2": "Sing"
+    },
+    "num_classes": 3
+  },
+  "case": {
+    "label_to_id": {
+      "NONE": 0,
+      "Acc": 1,
+      "Dat": 2,
+      "Nom": 3
+    },
+    "id_to_label": {
+      "0": "NONE",
+      "1": "Acc",
+      "2": "Dat",
+      "3": "Nom"
+    },
+    "num_classes": 4
+  },
+  "polite": {
+    "label_to_id": {
+      "NONE": 0,
+      "Form": 1
+    },
+    "id_to_label": {
+      "0": "NONE",
+      "1": "Form"
+    },
+    "num_classes": 2
+  },
+  "reflex": {
+    "label_to_id": {
+      "false": 0,
+      "true": 1
+    },
+    "id_to_label": {
+      "0": false,
+      "1": true
+    },
+    "num_classes": 2
+  }
+}

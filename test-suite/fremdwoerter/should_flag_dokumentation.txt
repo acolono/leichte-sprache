@@ -1,0 +1,4 @@
+# expected: pass
+# description: Dokumentation is accepted as common German word
+
+Bitte lesen Sie die Dokumentation sorgfaeltig durch.

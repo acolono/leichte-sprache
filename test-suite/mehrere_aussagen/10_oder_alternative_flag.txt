@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple alternatives with oder are acceptable
+
+Du kannst lesen oder fernsehen.

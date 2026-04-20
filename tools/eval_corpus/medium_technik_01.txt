@@ -1,0 +1,4 @@
+# length: medium
+# category: technik
+
+Die Konfiguration des Netzwerk-Routers erfolgt über das webbasierte Administrationsinterface. Zunächst muss die IP-Adresse des Geräts im Browser eingegeben werden. Nach der Authentifizierung können die WLAN-Einstellungen, die Firewall-Regeln und die Port-Weiterleitung angepasst werden. Es wird empfohlen, das Standardpasswort umgehend zu ändern.

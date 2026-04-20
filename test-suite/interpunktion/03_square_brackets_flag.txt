@@ -1,0 +1,4 @@
+# expected: flag
+# description: Square brackets are not allowed in Leichte Sprache
+
+Die Zahl [siehe Tabelle] ist wichtig.

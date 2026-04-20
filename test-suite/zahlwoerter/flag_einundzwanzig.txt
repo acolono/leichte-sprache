@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: einundzwanzig
+
+Am einundzwanzigsten März ist Frühlingsanfang.
+Sie wurde einundzwanzig Jahre alt.
+Einundzwanzig Tage dauert die Reise.

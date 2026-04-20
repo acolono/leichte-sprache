@@ -1,0 +1,4 @@
+# expected: flag
+# description: Morphological genitive with definite article - "des Nachbarn"
+
+Das Auto des Nachbarn ist rot.

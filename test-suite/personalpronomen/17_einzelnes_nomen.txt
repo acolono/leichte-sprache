@@ -1,0 +1,5 @@
+# expected: pass
+# description: Single noun referent in previous sentence - no ambiguity
+
+Der Mann geht nach Hause.
+Er ist muede.

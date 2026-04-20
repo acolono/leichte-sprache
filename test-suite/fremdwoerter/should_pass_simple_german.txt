@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: simple german
+
+Heute gehe ich in den Park. Die Sonne scheint und die Voegel singen.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Word with "un-" prefix that is not a negation - should pass
+
+Der Unfall war schlimm.

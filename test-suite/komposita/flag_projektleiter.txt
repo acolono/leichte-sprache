@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: projektleiter
+
+Der Projektentwicklungsleiter hat das Meeting geleitet.

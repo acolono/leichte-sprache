@@ -1,0 +1,5 @@
+# expected: pass
+# description: Small written numbers should pass
+
+Ich habe 2 Haende.
+Das Haus hat 3 Stockwerke.

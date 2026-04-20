@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should detect Administration as foreign word
+
+Die Administration evaluiert das Konzept.

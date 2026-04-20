@@ -1,0 +1,4 @@
+# expected: pass
+# description: Two coordinated main clauses without subordination - should pass
+
+Ich gehe nach Hause und ich esse.

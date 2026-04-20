@@ -1,0 +1,4 @@
+# expected: pass
+# description: Apposition set off by commas - should pass
+
+Berlin, die Hauptstadt, ist gross.

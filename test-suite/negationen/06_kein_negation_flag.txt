@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence with "kein/keine" negation - should flag
+
+Er hat keine Zeit.

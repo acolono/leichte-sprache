@@ -1,0 +1,4 @@
+# expected: flag
+# description: Saxon genitive with female proper name - "Annas Buch"
+
+Annas Buch liegt auf dem Tisch.

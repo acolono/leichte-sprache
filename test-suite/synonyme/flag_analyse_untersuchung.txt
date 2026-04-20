@@ -1,0 +1,7 @@
+# expected: flag
+# description: Should flag: analyse untersuchung
+
+Die Analyse zeigt wichtige Ergebnisse.
+Die Untersuchung dauerte drei Monate.
+Nach der Analyse wissen wir mehr.
+Die Untersuchung war sehr gründlich.

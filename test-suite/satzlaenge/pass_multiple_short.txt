@@ -1,0 +1,8 @@
+# expected: pass
+# description: Should pass: multiple short
+
+Die Sonne scheint.
+Es ist warm.
+Die Kinder spielen draußen.
+Sie sind fröhlich.
+Der Tag ist schön.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Two subject-verb clauses joined by comma - should flag
+
+Er arbeitet hart, er verdient es.

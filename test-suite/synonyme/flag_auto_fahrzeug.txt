@@ -1,0 +1,7 @@
+# expected: flag
+# description: Should flag: auto fahrzeug
+
+Ich habe ein neues Auto gekauft.
+Das Fahrzeug ist rot.
+Mein Auto fährt schnell.
+Das Fahrzeug braucht Benzin.

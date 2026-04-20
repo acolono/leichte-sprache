@@ -1,0 +1,4 @@
+# expected: flag
+# description: Concessive clause with "obwohl" - should flag
+
+Er ging spazieren, obwohl es regnete.

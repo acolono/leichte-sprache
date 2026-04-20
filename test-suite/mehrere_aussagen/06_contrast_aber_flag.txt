@@ -1,0 +1,4 @@
+# expected: flag
+# description: Contrasting statements with "aber" - should flag
+
+Anna arbeitet viel, aber sie ist trotzdem arm.

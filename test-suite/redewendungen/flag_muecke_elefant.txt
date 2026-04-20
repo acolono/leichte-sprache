@@ -1,0 +1,5 @@
+# expected: pass
+# description: Muecke Elefant not in idiom detection list
+
+Die Muecke ist klein.
+Der Elefant ist gross.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: very long complex
+
+Die Stadtverwaltung hat in ihrer letzten Sitzung beschlossen, dass alle Bürgerinnen und Bürger, die in den betroffenen Gebieten wohnen, einen Antrag auf finanzielle Unterstützung stellen können, wobei die Fristen bis zum Ende des Jahres verlängert wurden und verschiedene Dokumente eingereicht werden müssen.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Indirect question as subordinate clause - should flag
+
+Ich frage mich, warum er nicht kommt.

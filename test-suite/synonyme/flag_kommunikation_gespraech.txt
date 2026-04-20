@@ -1,0 +1,7 @@
+# expected: flag
+# description: Should flag: kommunikation gespraech
+
+Die Kommunikation im Team ist wichtig.
+Das Gespräch war sehr hilfreich.
+Gute Kommunikation löst Probleme.
+Im Gespräch fanden wir eine Lösung.

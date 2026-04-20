@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: arbeitsunfaehigkeit
+
+Die Arbeitsunfaehigkeitsbescheinigung muss eingereicht werden.

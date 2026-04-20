@@ -1,0 +1,4 @@
+# expected: flag
+# description: Morphological genitive with feminine noun - "der Arbeit"
+
+Die Qualitaet der Arbeit ist wichtig.

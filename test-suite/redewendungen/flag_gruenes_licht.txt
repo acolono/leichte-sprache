@@ -1,0 +1,4 @@
+# expected: pass
+# description: Gruenes Licht not in idiom detection list
+
+Der Chef hat gruenes Licht fuer das Projekt gegeben.

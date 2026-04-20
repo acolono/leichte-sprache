@@ -1,0 +1,4 @@
+# length: medium
+# category: medizin
+
+Patienten mit chronischen Atemwegserkrankungen sollten regelmäßig eine Lungenfunktionsprüfung durchführen lassen. Die Spirometrie wird ambulant durchgeführt und ist nicht invasiv. Bei Verschlechterung der Befunde wird eine Anpassung der medikamentösen Therapie empfohlen. Auch eine pulmonale Rehabilitation kann in Betracht gezogen werden.

@@ -1,0 +1,5 @@
+# expected: pass
+# description: Uses nouns instead of pronouns for clarity
+
+Das Amt prueft den Antrag.
+Das Amt schickt eine Antwort.

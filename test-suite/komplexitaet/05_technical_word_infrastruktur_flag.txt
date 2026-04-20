@@ -1,0 +1,4 @@
+# expected: flag
+# description: Technical word "Infrastruktur" should be flagged as complex
+
+Die Infrastruktur muss verbessert werden.

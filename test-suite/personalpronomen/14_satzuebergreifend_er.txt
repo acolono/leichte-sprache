@@ -1,0 +1,5 @@
+# expected: flag
+# description: Cross-sentence "er" with multiple noun referents (from prompt.md example)
+
+Peter trifft Hans im Park.
+Er ist muede.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: ca
+
+Die Fahrt dauert ca. 2 Stunden.

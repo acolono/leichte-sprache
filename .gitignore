@@ -1,0 +1,70 @@
+# Ignoriere Python-Cache-Verzeichnisse
+__pycache__/
+
+# Ignoriere kompilierte Python-Dateien
+*.pyc
+
+# Ignoriere weitere häufige Python-Dateien
+.pytest_cache/
+.vscode/
+.env
+
+leichte_sprache_venv
+/dev
+/.idea
+/textkomplexitaet/data/models--MiriUll--distilbert-german-text-complexity
+/textkomplexitaet/data/.locks
+
+# ============================================================================
+# BERT Models & ML Artifacts (CRITICAL: Verhindert Upload großer Modelle!)
+# ============================================================================
+
+# Externe Modell-Verzeichnisse (außerhalb des Repos)
+**/leichte_sprache_model_final/
+**/leichte_sprache_model_final_backup/
+
+# Hugging Face Cache
+.cache/
+.cache/huggingface/
+
+# Training Checkpoints (oft sehr groß)
+**/checkpoint-*/
+**/checkpoints/
+
+# Model Artifacts (PyTorch, TensorFlow, Safetensors)
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.h5
+*.pb
+
+# Model weight files are hosted on GitHub Releases (see MODEL_MANIFEST.json)
+regeln/*/model/*.safetensors
+regeln/*/model/*.pt
+regeln/*/model/*.bin
+regeln/*/model/*.pkl
+regeln/*/model/**/*.bin
+regeln/*/model/**/*.safetensors
+
+# NumPy/Pickle Model-Dateien (oft groß)
+*.npz
+*.pkl
+
+# Tokenizer/Vocab-Dateien (oft groß, werden von HF heruntergeladen)
+**/vocab.txt
+**/tokenizer.json
+
+/build
+/leichte_sprache_rulez.egg-info
+/results
+/.DS_Store
+
+# ML Training Staging and Backup (Phase 14)
+**/.staging/
+**/.backup/
+
+# Internal planning and agent tooling — not for public repo
+.planning/
+.claude/

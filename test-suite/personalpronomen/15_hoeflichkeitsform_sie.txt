@@ -1,0 +1,5 @@
+# expected: pass
+# description: Formal "Sie" address with multiple nouns should not be flagged
+
+Das Amt prueft den Antrag und die Unterlagen.
+Sie koennen das Ergebnis abwarten.

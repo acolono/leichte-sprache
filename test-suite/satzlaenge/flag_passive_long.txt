@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: passive long
+
+Das neue Gesetz wurde von der Regierung verabschiedet und wird von allen Behörden umgesetzt werden müssen, wobei verschiedene Übergangsfristen gewährt werden können und Ausnahmen in begründeten Fällen möglich sind.

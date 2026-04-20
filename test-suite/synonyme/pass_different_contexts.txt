@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: different contexts
+
+Das Haus steht am Berg.
+Die Wohnung ist in der Stadt.
+Im Haus wohnt eine Familie.
+Die Wohnung gehört mir.

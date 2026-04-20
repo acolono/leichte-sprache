@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence with "weder...noch" double negation - should flag
+
+Er trinkt weder Kaffee noch Tee.

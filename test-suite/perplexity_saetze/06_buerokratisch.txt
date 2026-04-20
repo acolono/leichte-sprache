@@ -1,0 +1,4 @@
+# expected: pass
+# description: Bureaucratic language but simple structure - vocabulary is handled by komplexitaet rule
+
+Gemaess der Verwaltungsvorschrift ist die Antragstellung unter Beruecksichtigung saemtlicher Dokumentationspflichten fristgerecht einzureichen.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Ampersand symbol is not allowed in Leichte Sprache
+
+Die Firma Schmidt & Soehne ist bekannt.

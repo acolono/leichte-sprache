@@ -1,0 +1,4 @@
+# expected: flag
+# description: Long sentence with more than 10 words should be flagged
+
+Der große Mann mit dem roten Hut geht jeden Tag in den Park spazieren.

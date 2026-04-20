@@ -1,0 +1,4 @@
+# expected: pass
+# description: Short and clear sentence
+
+Die Sonne scheint.

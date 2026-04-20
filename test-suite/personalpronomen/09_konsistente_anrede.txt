@@ -1,0 +1,5 @@
+# expected: pass
+# description: Consistent Sie address form throughout
+
+Sie koennen einen Antrag stellen.
+Sie bekommen dann einen Brief.

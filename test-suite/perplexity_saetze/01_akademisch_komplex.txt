@@ -1,0 +1,4 @@
+# expected: pass
+# description: Complex vocabulary but simple structure - vocabulary is handled by komplexitaet rule
+
+Die epistemologische Fundierung transzendentaler Erkenntnistheorie manifestiert sich in der dialektischen Synthese apriorischer Kategorien.

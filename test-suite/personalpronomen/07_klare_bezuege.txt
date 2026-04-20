@@ -1,0 +1,5 @@
+# expected: pass
+# description: Clear pronoun references with explicit nouns
+
+Die Frau heisst Maria.
+Maria geht einkaufen.

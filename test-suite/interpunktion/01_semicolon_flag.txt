@@ -1,0 +1,4 @@
+# expected: flag
+# description: Semicolon is not allowed in Leichte Sprache
+
+Das Wetter ist schoen; wir gehen spazieren.

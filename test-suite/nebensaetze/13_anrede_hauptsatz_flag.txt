@@ -1,0 +1,4 @@
+# expected: flag
+# description: Vocative (address) followed by main clause with comma - should flag
+
+Sehr geehrte Frau Meier, ich schreibe Ihnen heute.

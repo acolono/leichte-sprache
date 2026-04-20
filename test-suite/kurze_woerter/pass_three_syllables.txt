@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: three syllables
+
+Die Lampe leuchtet hell.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Colon is allowed in Leichte Sprache
+
+Es gibt drei Farben: rot, blau und gruen.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: sentence
+
+Heute ist ein schoener Tag. Die Sonne scheint am Himmel.

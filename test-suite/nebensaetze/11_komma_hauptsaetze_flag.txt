@@ -1,0 +1,4 @@
+# expected: flag
+# description: Two main clauses joined by comma without conjunction - should flag
+
+Er kommt, sie geht.

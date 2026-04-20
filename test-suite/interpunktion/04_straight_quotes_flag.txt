@@ -1,0 +1,4 @@
+# expected: flag
+# description: Straight quotes must be typographic quotes
+
+Er sagte "Hallo" zu mir.

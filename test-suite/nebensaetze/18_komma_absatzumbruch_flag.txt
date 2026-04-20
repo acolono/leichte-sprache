@@ -1,0 +1,6 @@
+# expected: flag
+# description: Comma before paragraph break (salutation with relative clause) - should flag
+
+Liebe Leute, die Bananen mögen,
+
+Die Banane ist die beliebteste Frucht auf der Welt.

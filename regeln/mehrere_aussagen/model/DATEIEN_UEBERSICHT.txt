@@ -1,0 +1,112 @@
+================================================================================
+STAGE STATEMENT SEGMENTATION - VOLLSTÄNDIGE DATEI-ÜBERSICHT
+================================================================================
+
+📁 VERZEICHNISSTRUKTUR:
+
+stage_statement_model/                           # Hauptverzeichnis (alle ML-Komponenten)
+│
+├── 📂 data/                                     # Trainingsdaten
+│   ├── train.csv                               # Original (GitHub, 732 KB)
+│   ├── trial.csv                               # Original (GitHub, 6.7 KB)
+│   ├── train_processed.csv                     # Verarbeitet: 1.996 samples
+│   ├── val_processed.csv                       # Verarbeitet: 249 samples
+│   └── test_processed.csv                      # Verarbeitet: 250 samples
+│
+├── 📂 scripts/                                  # Python-Skripte
+│   ├── preprocess_data.py                      # Data Preprocessing Pipeline
+│   ├── train_model_simple.py                   # BERT-Training (PyTorch, empfohlen!)
+│   └── train_model.py                          # BERT-Training (Huggingface Trainer)
+│
+├── 📂 models/                                   # Trainierte Modelle
+│   └── stage_statement_classifier_best/
+│       ├── pytorch_model.bin                   # Model Weights (416 MB) ⚠️ GROẞ
+│       ├── config.json                         # Modell-Konfiguration
+│       ├── tokenizer.json                      # BERT Tokenizer (710 KB)
+│       ├── vocab.txt                           # Vocabulary (249 KB)
+│       ├── tokenizer_config.json               # Tokenizer Config
+│       └── special_tokens_map.json             # Special Tokens
+│
+├── 📄 README.md                                 # Ausführliche Dokumentation
+├── 📄 requirements.txt                          # Python Dependencies
+├── 📄 PROJEKT_ZUSAMMENFASSUNG.md               # Projekt-Übersicht
+└── 📄 DATEIEN_UEBERSICHT.txt                   # Diese Datei
+
+
+📁 IM HAUPTVERZEICHNIS (leichte-sprache-rulez/):
+
+├── regeln/
+│   └── regel_mehrere_aussagen.py               # 🆕 DIE FERTIGE REGEL (wichtigste Datei!)
+│
+├── regeln_config.py                            # ✏️ Aktualisiert (Regel hinzugefügt)
+└── STAGE_REGEL_ANLEITUNG.md                    # 🆕 Kurzanleitung für Nutzer
+
+================================================================================
+WICHTIGSTE DATEIEN:
+================================================================================
+
+🔥 FÜR DEN ENDNUTZER (Regel verwenden):
+
+1. regeln/regel_mehrere_aussagen.py
+   → Die fertige Regel, einfach in regeln_config.py aktivieren!
+   
+2. STAGE_REGEL_ANLEITUNG.md
+   → Schnellstart-Anleitung für Nutzer
+
+3. stage_statement_model/models/stage_statement_classifier_best/*
+   → Trainiertes Modell (wird automatisch geladen)
+
+
+🔧 FÜR ENTWICKLER (Re-Training, Anpassungen):
+
+1. stage_statement_model/scripts/preprocess_data.py
+   → Daten vorbereiten
+   
+2. stage_statement_model/scripts/train_model_simple.py
+   → Modell trainieren
+   
+3. stage_statement_model/README.md
+   → Technische Dokumentation
+
+
+📊 FÜR DOKUMENTATION:
+
+1. stage_statement_model/PROJEKT_ZUSAMMENFASSUNG.md
+   → Vollständiger Projekt-Bericht
+   
+2. stage_statement_model/README.md
+   → Technische Details
+
+3. STAGE_REGEL_ANLEITUNG.md
+   → Nutzer-Anleitung
+
+================================================================================
+DATEI-GRÖẞEN:
+================================================================================
+
+GROSS (> 100 MB):
+- pytorch_model.bin: 416 MB (trainierte BERT-Weights)
+
+MITTEL (1-10 MB):
+- tokenizer.json: 710 KB
+- train.csv: 732 KB
+- vocab.txt: 249 KB
+
+KLEIN (< 100 KB):
+- Alle Python-Skripte: je ~5-15 KB
+- Alle Config/JSON-Dateien: je < 10 KB
+- Verarbeitete CSV-Dateien: je ~50-200 KB
+
+================================================================================
+GESCHÄTZTE GESAMT-GRÖẞE: ~420 MB
+================================================================================
+
+HINWEIS: 
+- Das trainierte Modell (416 MB) ist das größte Element
+- Ohne Modell: ~4 MB (Skripte + Daten + Dokumentation)
+- Modell kann jederzeit mit train_model_simple.py neu trainiert werden
+
+================================================================================
+ERSTELLT: 2025-10-13
+SENIOR DATA SCIENTIST
+================================================================================

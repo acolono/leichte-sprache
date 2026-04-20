@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: navigation
+
+Die Navigation auf der Webseite ist sehr einfach.

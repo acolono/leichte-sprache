@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: prof
+
+Prof. Schmidt haelt heute einen Vortrag.

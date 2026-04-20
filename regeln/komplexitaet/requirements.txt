@@ -1,0 +1,12 @@
+# Dependencies für Komplexitäts-Regel
+# Verwendet BERT-Modell für Textkomplexitäts-Analyse
+
+spacy>=3.0
+torch>=1.13.0
+transformers>=4.20.0
+
+# Externe Library (muss separat installiert werden):
+# textkomplexitaet - Siehe README.md für Installation
+
+# Nach Installation:
+# python -m spacy download de_core_news_lg

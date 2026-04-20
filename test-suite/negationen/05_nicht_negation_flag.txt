@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence with "nicht" negation - should flag
+
+Der Bus kommt heute nicht.

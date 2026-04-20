@@ -1,0 +1,4 @@
+# length: short
+# category: recht
+
+Der Beschuldigte hat das Recht, die Aussage zu verweigern, sofern er sich durch die Aussage selbst belasten würde.

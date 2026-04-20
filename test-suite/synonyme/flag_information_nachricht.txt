@@ -1,0 +1,7 @@
+# expected: flag
+# description: Should flag: information nachricht
+
+Ich brauche mehr Information.
+Die Nachricht kam heute Morgen.
+Diese Information ist wichtig.
+Die Nachricht war überraschend.

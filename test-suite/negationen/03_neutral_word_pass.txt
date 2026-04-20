@@ -1,0 +1,4 @@
+# expected: pass
+# description: Neutral word that might look negative but is not - should pass
+
+Das Problem ist geloest.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Should pass: tech words
+
+Der Computer steht auf dem Tisch. Das System funktioniert gut.

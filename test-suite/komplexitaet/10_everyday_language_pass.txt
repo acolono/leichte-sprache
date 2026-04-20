@@ -1,0 +1,4 @@
+# expected: pass
+# description: Everyday language should pass complexity check
+
+Ich esse gerne Kuchen.

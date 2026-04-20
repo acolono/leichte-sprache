@@ -1,0 +1,4 @@
+# expected: flag
+# description: Future passive with "wird bezahlt werden"
+
+Die Rechnung wird naechste Woche bezahlt werden.

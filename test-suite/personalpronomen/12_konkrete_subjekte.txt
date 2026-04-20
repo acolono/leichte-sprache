@@ -1,0 +1,4 @@
+# expected: pass
+# description: Uses concrete subjects instead of impersonal "man"
+
+Am Anfang dachten die Retter: Die Lawine erreichte die Piste.

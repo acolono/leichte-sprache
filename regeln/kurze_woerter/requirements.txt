@@ -1,0 +1,8 @@
+# Dependencies für Kurze-Wörter-Regel
+# Verwendet spaCy + pyphen für Silbentrennung
+
+spacy>=3.0
+pyphen>=0.17.2
+
+# Nach Installation muss das deutsche spaCy-Modell heruntergeladen werden:
+# python -m spacy download de_core_news_lg

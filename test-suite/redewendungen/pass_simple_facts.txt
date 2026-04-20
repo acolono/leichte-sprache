@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: simple facts
+
+Der Himmel ist blau.
+Wasser ist wichtig für den Körper.
+Die Sonne scheint heute.
+Es regnet draußen.

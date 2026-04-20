@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: mwst
+
+Der Preis betraegt 100 Euro inklusive MwSt.

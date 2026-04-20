@@ -1,0 +1,4 @@
+# expected: pass
+# description: Direct question with no subordinate clause - should pass
+
+Wann kommt der Bus?

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Question mark is allowed in Leichte Sprache
+
+Wie geht es Ihnen?

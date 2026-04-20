@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: verstaendlichkeit
+
+Die Verstaendlichkeit der Dokumentation ist wichtig.

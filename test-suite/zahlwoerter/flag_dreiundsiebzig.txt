@@ -1,0 +1,6 @@
+# expected: flag
+# description: Should flag: dreiundsiebzig
+
+Mein Opa ist dreiundsiebzig Jahre alt.
+Dreiundsiebzig Kilometer sind es bis zur Stadt.
+Er hat dreiundsiebzig Bücher in seinem Regal.

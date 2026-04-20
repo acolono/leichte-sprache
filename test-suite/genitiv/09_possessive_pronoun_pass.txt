@@ -1,0 +1,4 @@
+# expected: pass
+# description: Possessive pronoun instead of genitive - "sein Auto"
+
+Sein Auto ist blau.

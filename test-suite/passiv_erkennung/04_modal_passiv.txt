@@ -1,0 +1,4 @@
+# expected: flag
+# description: Modal passive with "muss ausgefuellt werden"
+
+Das Formular muss vollstaendig ausgefuellt werden.

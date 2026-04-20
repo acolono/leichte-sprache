@@ -1,0 +1,4 @@
+# expected: pass
+# description: Comma-separated enumeration of nouns - should pass
+
+Er kauft Aepfel, Birnen und Orangen.

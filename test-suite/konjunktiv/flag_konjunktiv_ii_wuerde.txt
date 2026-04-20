@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: konjunktiv ii wuerde
+
+Ich wuerde das nicht empfehlen.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple everyday sentence should pass
+
+Der Hund ist braun.

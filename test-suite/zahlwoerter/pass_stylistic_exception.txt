@@ -1,0 +1,5 @@
+# expected: pass
+# description: Digits instead of written numbers
+
+In den letzten 5 Jahren hat sich viel veraendert.
+Das war das 1. Mal.

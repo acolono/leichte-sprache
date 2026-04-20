@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence with "doch" connecting contrasting statements - should flag
+
+Er wollte kommen, doch er hatte keine Zeit.

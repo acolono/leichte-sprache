@@ -1,0 +1,4 @@
+# expected: pass
+# description: Simple active voice sentence
+
+Der Mann kauft ein Brot.

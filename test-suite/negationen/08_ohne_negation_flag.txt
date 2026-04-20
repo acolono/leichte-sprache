@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence with "ohne" (without) negation - should flag
+
+Er ging ohne Jacke nach draussen.

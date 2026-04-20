@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: datenschutz
+
+Die Datenschutzgrundverordnung ist wichtig.

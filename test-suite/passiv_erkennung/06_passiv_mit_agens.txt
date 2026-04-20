@@ -1,0 +1,4 @@
+# expected: flag
+# description: Passive with agent "von dem Autor"
+
+Das Buch wird von dem Autor geschrieben.

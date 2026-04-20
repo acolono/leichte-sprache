@@ -1,0 +1,4 @@
+# expected: flag
+# description: Sentence with "nichts" negation - should flag
+
+Ich habe nichts gesehen.

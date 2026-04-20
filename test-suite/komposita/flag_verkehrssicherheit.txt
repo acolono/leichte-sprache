@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: verkehrssicherheit
+
+Die Strassenverkehrssicherheitsverordnung regelt den Verkehr.

@@ -1,0 +1,4 @@
+# expected: pass
+# description: Active future tense with "wird kommen" - not passive
+
+Der Zug wird morgen kommen.

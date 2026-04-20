@@ -1,0 +1,4 @@
+# expected: flag
+# description: Causal subordinate clause with "weil" - should flag
+
+Ich bleibe zu Hause, weil es regnet.

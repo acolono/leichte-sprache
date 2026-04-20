@@ -1,0 +1,4 @@
+# expected: flag
+# description: Should flag: gmbh
+
+Die Musterfirma GmbH bietet viele Produkte an.

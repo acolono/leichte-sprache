@@ -1,0 +1,4 @@
+# expected: pass
+# description: "Der" used as article not relative pronoun - should pass
+
+Der Mann kauft ein Buch.

@@ -1,0 +1,4 @@
+# expected: flag
+# description: Multiple subjects with different actions - should flag
+
+Der Vater kocht und die Mutter putzt.

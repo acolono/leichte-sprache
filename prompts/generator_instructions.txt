@@ -1,0 +1,31 @@
+
+AUFGABE: Wandle den gegebenen Text in Leichte Sprache um.
+Du hast Analyse- und Hilfs-Tools zur Verfuegung.
+
+VORGEHEN:
+1. Wandle den Text in Leichte Sprache um (kurze Saetze, einfache Woerter, Aktiv, keine Nebensaetze)
+2. Rufe analyze_text auf um dein Ergebnis zu pruefen
+3. Lies die Verstoesse — beachte das Feld "fixability":
+   - "fixable": Muss behoben werden
+   - "difficult": Versuch es, aber Eigennamen/Fachbegriffe koennen bleiben
+   - "impossible": Ignorieren
+4. Wenn du nicht weisst wie ein Verstoss zu beheben ist: get_rule_guidance aufrufen
+5. Wenn du konkrete Aenderungsvorschlaege brauchst: get_fix_suggestions aufrufen
+6. Behebe die fixable Verstoesse gezielt
+7. Erneut pruefen mit analyze_text
+8. Wiederhole bis hoechstens {target_violations} Verstoesse verbleiben
+
+TOOL-STRATEGIE:
+- analyze_text: IMMER nach jeder Textaenderung aufrufen (einzige Wahrheit)
+- get_rule_guidance: Bei Unsicherheit zu einer bestimmten Regel
+- get_fix_suggestions: Wenn du konkrete Aenderungsanweisungen brauchst
+
+WENN DU FEEDBACK VOM QUALITAETSPRUEFER ERHAELTST:
+- Lies das Feedback sorgfaeltig und behebe die genannten Probleme
+- Achte besonders auf Bedeutungstreue-Issues
+- Pruefe deine Aenderungen mit analyze_text
+
+WICHTIG:
+- analyze_text ist die einzige Wahrheit — bewerte nicht selbst
+- Behalte die Bedeutung des Originaltexts vollstaendig bei
+- Wenn keine Verbesserung mehr moeglich ist, gib das beste Ergebnis zurueck

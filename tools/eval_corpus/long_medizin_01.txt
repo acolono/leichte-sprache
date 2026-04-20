@@ -1,0 +1,4 @@
+# length: long
+# category: medizin
+
+Diabetes mellitus Typ 2 ist eine chronische Stoffwechselerkrankung, die durch eine Insulinresistenz und eine fortschreitende Dysfunktion der Betazellen der Bauchspeicheldrüse gekennzeichnet ist. Die Diagnose wird anhand des Nüchternblutzuckers, des oralen Glukosetoleranztests oder des HbA1c-Wertes gestellt. Zu den Risikofaktoren gehören Adipositas, Bewegungsmangel, eine unausgewogene Ernährung sowie eine genetische Prädisposition. Die Therapie umfasst zunächst Lebensstilmodifikationen wie Gewichtsreduktion, regelmäßige körperliche Aktivität und eine kohlenhydratbewusste Ernährung. Bei unzureichender Blutzuckerkontrolle wird eine medikamentöse Behandlung mit oralen Antidiabetika oder Insulininjektionen eingeleitet. Regelmäßige Kontrolluntersuchungen beim Diabetologen sind unverzichtbar, um Folgeerkrankungen wie diabetische Nephropathie, Retinopathie oder Neuropathie frühzeitig zu erkennen und zu behandeln.

@@ -1,0 +1,10 @@
+# Dependencies für Komposita-Regel
+# Verwendet spaCy + german_compound_splitter für Kompositum-Zerlegung
+
+spacy>=3.0
+german_compound_splitter>=0.1.0
+
+# Nach Installation muss das deutsche spaCy-Modell heruntergeladen werden:
+# python -m spacy download de_core_news_lg
+
+# Optional: test_german_dict.txt im selben Ordner für erweiterte Worterkennung

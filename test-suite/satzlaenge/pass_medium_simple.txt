@@ -1,0 +1,7 @@
+# expected: pass
+# description: Should pass: medium simple
+
+Maria geht heute zum Arzt.
+Der Arzt untersucht sie.
+Sie bekommt ein Rezept.
+Dann geht sie in die Apotheke.

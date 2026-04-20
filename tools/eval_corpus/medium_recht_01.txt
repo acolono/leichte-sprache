@@ -1,0 +1,4 @@
+# length: medium
+# category: recht
+
+Gemäß § 823 BGB ist derjenige, der vorsätzlich oder fahrlässig das Eigentum eines anderen widerrechtlich verletzt, dem anderen zum Ersatz des daraus entstehenden Schadens verpflichtet. Die Beweislast obliegt grundsätzlich dem Geschädigten, wobei unter bestimmten Voraussetzungen eine Beweislastumkehr stattfinden kann.
