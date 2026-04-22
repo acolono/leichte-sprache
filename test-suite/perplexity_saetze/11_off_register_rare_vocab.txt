@@ -1,0 +1,4 @@
+# expected: flag
+# description: Off-register rare vocab, structurally simple. Canary for the perplexity signal — this must flag via OOV even though syntactic checks are silent.
+
+Die Protonenkollision fand statt.

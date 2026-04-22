@@ -1,4 +1,4 @@
-# expected: pass
-# description: Complex vocabulary but simple structure - vocabulary is handled by komplexitaet rule
+# expected: flag
+# description: Academic vocabulary — off-register for Leichte Sprache. The supplementary perplexity signal catches this lexical register even though the structure is simple.
 
 Die epistemologische Fundierung transzendentaler Erkenntnistheorie manifestiert sich in der dialektischen Synthese apriorischer Kategorien.

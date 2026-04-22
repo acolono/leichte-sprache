@@ -156,6 +156,94 @@ def check_rule(doc: Doc) -> List[str]:
                     processed_tokens.add(token.i)
                     break
 
+    # =====================================================================
+    # REGEL 6: KOMMA-STRUKTUR (sentence-level comma abuse)
+    # =====================================================================
+    # Catches patterns that don't involve classic Nebensätze but are still
+    # comma-driven complexity violating Leichte Sprache:
+    #   6a. Sentence-terminal comma (address lines, paragraph breaks).
+    #   6b. Two finite main-clause verbs joined by a bare comma (no und/oder/
+    #       aber/doch/sondern). DIN SPEC §5.4: "pro Satz eine Aussage".
+    for sent in doc.sents:
+        errors.extend(_detect_comma_structure(sent))
+
+    return errors
+
+
+# Coordinating conjunctions that legitimately connect main clauses
+# (still discouraged in Leichte Sprache but not asyndeton).
+_COORDINATING_CONJUNCTIONS = {"und", "oder", "aber", "doch", "sondern", "denn"}
+
+
+def _detect_comma_structure(sent) -> List[str]:
+    """Flag sentence-level comma misuse.
+
+    Covers two DIN SPEC 33429:2025 §5.4 violations not caught by the
+    subordinate-clause rules above:
+      6a. Sentence ending with ',' instead of '.'/'?'/'!' — typical in
+          salutations and paragraph breaks that don't form complete sentences.
+      6b. Two main-clause verbs joined by a bare comma ("Er kommt, sie geht.").
+          Parataxis with no conjunction creates two statements in one orthographic
+          sentence. DIN SPEC: one statement per sentence.
+    """
+    errors: List[str] = []
+
+    # --- 6a. Sentence-terminal comma ---------------------------------------
+    last_content = None
+    for tok in reversed(list(sent)):
+        if not tok.is_space:
+            last_content = tok
+            break
+    if last_content is not None and last_content.text == ",":
+        snippet = sent.text.strip()[:60]
+        errors.append(
+            f'Satz endet mit Komma statt mit Punkt: "{snippet}". '
+            "Besser: Beenden Sie den Satz mit einem Punkt oder beginnen Sie eine neue Zeile."
+        )
+        return errors  # Avoid duplicate 6b flag on the same sentence.
+
+    # --- 6b. Comma-connected main clauses (finite verbs in cj-relation) ----
+    # Find finite verbs (indicative or imperative) with dep_='cj' joined to
+    # their head by a bare comma — no coordinating conjunction in between.
+    # Accept heads that are verbs, nouns, or pronouns (vocatives parse as
+    # NOUN ROOT; "Sehr geehrte Frau Meier, ich schreibe…" puts the comma
+    # under a NOUN head with the finite verb as cj).
+    finite_tags = {"VVFIN", "VAFIN", "VMFIN", "VVIMP", "VAIMP"}
+    for tok in sent:
+        if tok.tag_ not in finite_tags:
+            continue
+        if tok.dep_ != "cj":
+            continue
+        head = tok.head
+        start, end = sorted((head.i, tok.i))
+        has_comma = False
+        has_conjunction = False
+        for mid in sent.doc[start + 1 : end]:
+            if mid.text == ",":
+                has_comma = True
+            if mid.text.lower() in _COORDINATING_CONJUNCTIONS:
+                has_conjunction = True
+        if has_comma and not has_conjunction:
+            snippet = sent.text.strip()[:60]
+            errors.append(
+                f'Zwei Haupt-Sätze mit Komma verbunden ("{snippet}..."). '
+                "Besser: Machen Sie daraus zwei Sätze mit je einem Punkt."
+            )
+            return errors  # One message per sentence.
+
+    # --- 6c. Relative clause via dep_=rc (spaCy sometimes misses PRELS) ----
+    # Test cases like "Liebe Leute, die Bananen mögen," parse "die" as DET
+    # (not PRELS). But the governing verb "mögen" correctly receives dep_=rc
+    # (relative clause). Catch that here.
+    for tok in sent:
+        if tok.dep_ == "rc" and tok.tag_ in finite_tags:
+            snippet = sent.text.strip()[:60]
+            errors.append(
+                f'Relativsatz erkannt ("{snippet}..."). '
+                "Besser: Formulieren Sie zwei einfache Sätze."
+            )
+            return errors
+
     return errors
 
 

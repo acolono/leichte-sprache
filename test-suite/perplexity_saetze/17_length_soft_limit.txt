@@ -1,0 +1,4 @@
+# expected: pass
+# description: Long-ish but no other structural issue (12 words, no Nebensatz, no passive, named subject, LS-register vocab). Verifies the soft word-count limit does not flag alone.
+
+Ich gehe heute mit meinem besten Freund in den neuen Park.

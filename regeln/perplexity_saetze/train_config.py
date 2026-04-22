@@ -8,6 +8,8 @@ discovers and runs training through the unified interface.
 from pathlib import Path
 
 MODULE_DIR = Path(__file__).parent
+PROJECT_ROOT = MODULE_DIR.parent.parent
+DEFAULT_CORPUS = PROJECT_ROOT / "data" / "leichte_sprache_korpus.txt"
 
 # METADATA for CLI discovery (tools/ml --list)
 METADATA = {
@@ -45,7 +47,7 @@ def train(output_dir: Path, device: str, seed: int) -> dict:
         train_model,
     )
 
-    corpus_path = MODULE_DIR / "data" / "leichte_sprache_korpus.txt"
+    corpus_path = DEFAULT_CORPUS
     if not corpus_path.exists():
         raise FileNotFoundError(
             f"Corpus not found: {corpus_path}\n"
@@ -107,7 +109,7 @@ def evaluate(model_dir: Path, **kwargs) -> dict:
         if data_path is not None:
             corpus_path = Path(data_path)
         else:
-            corpus_path = MODULE_DIR / "data" / "leichte_sprache_korpus.txt"
+            corpus_path = DEFAULT_CORPUS
 
         if not corpus_path.exists():
             return {"status": "error", "message": f"Corpus not found: {corpus_path}"}

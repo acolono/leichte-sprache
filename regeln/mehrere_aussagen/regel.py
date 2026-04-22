@@ -377,8 +377,9 @@ def _calculate_adaptive_threshold(
     if doc is not None:
         text_type = _detect_text_type(doc)
         if text_type == "leichte_sprache":
-            # Bei Leichter Sprache: Leicht konservativere Thresholds
-            text_type_adjustment = 0.05  # Moderate Erhöhung für Leichte Sprache
+            # DIN SPEC 33429 §5.4 — Leichte Sprache demands stricter
+            # (lower) thresholds, not looser ones. Invert the sign.
+            text_type_adjustment = -0.03
 
     # Extrahiere linguistische Features
     features = _analyze_linguistic_features(sent)

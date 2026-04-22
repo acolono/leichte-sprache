@@ -191,10 +191,18 @@ def check_rule(doc: Doc) -> List[str]:
             errors.append(msg)
             seen.add(msg)
 
+    # DIN SPEC 33429 §5.4.9 / Hildesheim Regelbuch: avoid 3rd-person
+    # personal pronouns (er/sie/es/ihn/ihm/ihr/ihnen/…). Runs without
+    # the ML model so the rule degrades gracefully.
+    for msg in _detect_third_person_pronoun_use(doc):
+        if msg not in seen:
+            errors.append(msg)
+            seen.add(msg)
+
     # ML-dependent checks via BaseMLRule singleton
     analyzer = PronounModel.get_model()
     if analyzer is None:
-        return errors  # Graceful degradation: man-only
+        return errors  # Graceful degradation: man-only + DIN SPEC
 
     try:
         results = analyzer.analyze(doc.text)
@@ -488,5 +496,102 @@ def _detect_man_pronoun(doc: Doc) -> List[str]:
                 f'"man" ist unklar und abstrakt. '
                 f'Besser: "die Menschen" oder "die Leute".'
             )
+
+    return errors
+
+
+_THIRD_PERSON_FORMS = {
+    "er", "ihn", "ihm", "seiner",
+    "sie", "ihr", "ihnen", "ihrer",
+    "es",
+}
+_POLITE_CAPITALIZED = {
+    "Sie", "Ihnen", "Ihr", "Ihre", "Ihrer", "Ihrem", "Ihren", "Ihres",
+}
+_EXPLETIVE_VERBS = {
+    "regnen", "schneien", "hageln", "donnern", "blitzen",
+    "dämmern", "tagen", "nachten", "frieren",
+    "geben",  # "es gibt"
+}
+
+
+def _is_polite_form(token: Token) -> bool:
+    """Return True if the pronoun is formal 'Sie/Ihnen/Ihr…' (Höflichkeitsform).
+
+    In German the polite 2nd-person address is morphologically identical to
+    the 3rd-person-plural pronoun. We disambiguate via two rules:
+      1. Non-sentence-start capitalized 'Sie/Ihnen/Ihr…' is always polite.
+      2. Sentence-start capitalized 'Sie' + plural-number verb is polite;
+         'Sie' + singular-number verb is referential 'sie' (she).
+    """
+    surface = token.text
+    if surface not in _POLITE_CAPITALIZED:
+        return False
+
+    # Any "Ihnen/Ihr/Ihre/Ihrer/…" (capital I) mid-text is unambiguously polite.
+    if surface != "Sie":
+        return True
+
+    # For "Sie" — verb agreement disambiguates.
+    verb = token.head
+    if verb is not None and verb.pos_ in ("VERB", "AUX"):
+        verb_number = verb.morph.get("Number")
+        if verb_number == ["Sing"]:
+            # 3rd-sing verb -> referential "Sie" (she), e.g. "Sie geht"
+            return False
+    # Default: capitalized "Sie" is polite.
+    return True
+
+
+def _is_expletive_es(token: Token) -> bool:
+    """Return True if 'es' is the expletive subject of a weather/existential verb."""
+    if token.text.lower() != "es":
+        return False
+    if token.dep_ == "expl":
+        return True
+    verb = token.head
+    if verb is not None and verb.pos_ in ("VERB", "AUX"):
+        if verb.lemma_.lower() in _EXPLETIVE_VERBS:
+            return True
+    return False
+
+
+def _detect_third_person_pronoun_use(doc: Doc) -> List[str]:
+    """Flag every 3rd-person personal pronoun per DIN SPEC 33429 §5.4.9.
+
+    Carve-outs (Hildesheim Regelbuch, Bredel & Maaß, pp. 143 ff.):
+      - polite formal address 'Sie/Ihnen/Ihr…' (Höflichkeitsform)
+      - expletive 'es' without antecedent ('Es regnet', 'Es gibt')
+      - impersonal 'man' (handled by _detect_man_pronoun)
+    """
+    errors = []
+    reported_positions = set()
+
+    for token in doc:
+        if token.pos_ != "PRON":
+            continue
+        lower = token.text.lower()
+        if lower not in _THIRD_PERSON_FORMS:
+            continue
+        # spaCy Person feature — skip 1st/2nd person pronouns that happen to
+        # share a surface form (e.g. "ihr" as 2nd-plur-informal).
+        person = token.morph.get("Person")
+        if person and "3" not in person:
+            continue
+        if _is_polite_form(token):
+            continue
+        if lower == "es" and _is_expletive_es(token):
+            continue
+        if token.i in reported_positions:
+            continue
+        reported_positions.add(token.i)
+
+        sent = token.sent
+        sent_text = sent.text[:60] + "..." if len(sent.text) > 60 else sent.text
+        errors.append(
+            f'Personalpronomen "{token.text}" in: "{sent_text}". '
+            "Leichte Sprache: Personalpronomen der 3. Person sollten vermieden werden. "
+            "Wiederholen Sie stattdessen das Haupt-Wort."
+        )
 
     return errors

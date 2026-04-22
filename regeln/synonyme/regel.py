@@ -3,17 +3,53 @@ Advanced rule for synonym detection using NLP techniques.
 Uses semantic vector analysis, word frequency evaluation, and contextual consistency checking.
 """
 
+import json
 import re
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import spacy
 from spacy.tokens import Doc, Token
 from wordfreq import word_frequency
 
-# Import configuration (currently empty, for future extensions)
 from . import config  # noqa: F401
+
+
+# OpenThesaurus-backed synset index. Loaded lazily on first call.
+# Licensing: LGPL-2.1 or CC-BY-SA 4.0. File bundled under regeln/synonyme/data/.
+_OT_INDEX: Optional[Dict[str, Set[int]]] = None
+
+
+def _load_openthesaurus() -> Dict[str, Set[int]]:
+    """Load OpenThesaurus synsets as lemma -> set-of-synset-ids.
+
+    Returns empty dict if the data file is missing — rule degrades to the
+    curated BEKANNTE_SYNONYME + vector-similarity path.
+    """
+    global _OT_INDEX
+    if _OT_INDEX is not None:
+        return _OT_INDEX
+    index: Dict[str, Set[int]] = {}
+    data_path = Path(__file__).parent / "data" / "openthesaurus.json"
+    if data_path.is_file():
+        try:
+            synsets = json.loads(data_path.read_text(encoding="utf-8"))
+            for sid, synset in enumerate(synsets):
+                for word in synset:
+                    lower = word.lower()
+                    index.setdefault(lower, set()).add(sid)
+        except (OSError, json.JSONDecodeError):
+            index = {}
+    _OT_INDEX = index
+    return index
+
+
+def _openthesaurus_synsets(lemma: str) -> Optional[Set[int]]:
+    """Return the set of OpenThesaurus synset IDs a lemma belongs to."""
+    idx = _load_openthesaurus()
+    return idx.get(lemma)
 
 # Known synonym pairs with recommendations and context information
 import logging
@@ -274,6 +310,19 @@ def _is_genuine_synonym_pair(token1: Token, token2: Token) -> bool:
         return lemma2 in BEKANNTE_SYNONYME[lemma1]["synonyme"]
     if lemma2 in BEKANNTE_SYNONYME:
         return lemma1 in BEKANNTE_SYNONYME[lemma2]["synonyme"]
+
+    # OpenThesaurus-backed synset check (DIN SPEC 33429: "one word per concept").
+    # Opt-in via config.USE_OPENTHESAURUS because the raw thesaurus treats pairs
+    # like "Haus/Familie" as synonyms (Habsburg-house reading) which produces
+    # false positives on ordinary prose.
+    if getattr(config, "USE_OPENTHESAURUS", False):
+        ot_synsets1 = _openthesaurus_synsets(lemma1) or _openthesaurus_synsets(token1.text.lower())
+        ot_synsets2 = _openthesaurus_synsets(lemma2) or _openthesaurus_synsets(token2.text.lower())
+        if ot_synsets1 and ot_synsets2 and ot_synsets1 & ot_synsets2:
+            if token1.pos_ == token2.pos_ and (token1.has_vector and token2.has_vector):
+                # Require additional vector-similarity confirmation.
+                if token1.similarity(token2) >= 0.6:
+                    return True
 
     # Semantic similarity with stricter criteria
     if not (token1.has_vector and token2.has_vector):

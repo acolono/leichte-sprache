@@ -1,0 +1,4 @@
+# expected: pass
+# description: Borderline loanword ("Smartphone") that IS present in the LS corpus. Verifies the threshold does not false-positive on approved modern vocabulary.
+
+Das Smartphone klingelt laut.

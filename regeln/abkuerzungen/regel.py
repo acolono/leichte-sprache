@@ -411,7 +411,82 @@ def check_rule(doc: Doc) -> List[str]:
         # Fehlerbehandlung: Gebe Fehlermeldung zurück statt abzubrechen
         violations.append(f"Fehler bei BERT-Abkuerzungserkennung: {str(e)}")
 
+    # Surface-level fallback: catch common title abbreviations that BERT
+    # occasionally misses (Dr., Prof., Ing., Mag., Dipl., usw.). DIN SPEC
+    # 33429 §5.4 wants all such abbreviations spelled out.
+    violations.extend(_detect_common_title_abbreviations(doc, existing=violations))
+
+    # DIN SPEC 33429 §5.4 tolerates an abbreviation that is explicitly expanded
+    # on first use: "Bundes-Amt für Verwaltung (BAV)". Subsequent uses of BAV
+    # in the same document should NOT be re-flagged. Filter violations whose
+    # abbreviation surface appears inside a "(…)" right after an expansion.
+    violations = _filter_first_use_expanded(doc, violations)
+
     return violations
+
+
+def _filter_first_use_expanded(doc: Doc, violations: List[str]) -> List[str]:
+    """Drop violations for abbreviations that are defined on first use.
+
+    Pattern: <longform words> (<UPPERCASE_abbreviation>) anywhere in the doc.
+    Every later occurrence of that abbreviation stops being a violation.
+    """
+    # Build the set of "defined" abbreviations
+    defined: set = set()
+    text = doc.text
+    import re as _re
+    # Match parenthesised short tokens of 2-6 uppercase letters/digits preceded
+    # by at least one non-parenthesised word (the long form).
+    for m in _re.finditer(r"\(([A-ZÄÖÜ][A-ZÄÖÜa-zäöüß0-9\-]{1,8})\)", text):
+        defined.add(m.group(1).strip().rstrip(".,;:"))
+    if not defined:
+        return violations
+    kept: List[str] = []
+    for v in violations:
+        drop = False
+        for abbr in defined:
+            # Our message wraps the hit in quotes: `"XXX"` or `"XXX."`.
+            needle_lower = f'"{abbr.lower()}"'
+            if needle_lower in v.lower() or f'"{abbr.lower()}."' in v.lower():
+                drop = True
+                break
+        if not drop:
+            kept.append(v)
+    return kept
+
+
+# Title abbreviations the BERT model is known to miss. Surface-form match
+# required — only when the token ends with a period.
+_COMMON_TITLE_ABBREVIATIONS = {
+    "Dr", "Prof", "Ing", "Mag", "Dipl", "Med", "hc",
+    "Mr", "Mrs", "Ms",
+    "ggf", "bzw", "ca", "usw", "bspw", "sog", "evtl", "vgl", "z",
+    "ebd", "o", "u", "zzgl",
+}
+
+
+def _detect_common_title_abbreviations(doc: Doc, existing: List[str]) -> List[str]:
+    """Surface-match fallback for title abbreviations BERT misses."""
+    existing_lower = " ".join(existing).lower()
+    extras: List[str] = []
+    for i, token in enumerate(doc):
+        surface = token.text.rstrip(".,;:")
+        if surface not in _COMMON_TITLE_ABBREVIATIONS:
+            continue
+        # Only trigger when the token (or the very next token) supplies the period
+        period_follows = token.text.endswith(".") or (
+            i + 1 < len(doc) and doc[i + 1].text == "."
+        )
+        if not period_follows:
+            continue
+        # Skip if BERT already flagged this exact surface anywhere in the text.
+        if f'"{surface}."' in existing_lower or f'"{surface}. "' in existing_lower:
+            continue
+        extras.append(
+            f'Abkürzung erkannt: "{surface}." '
+            f"Schreiben Sie die Abkürzung aus."
+        )
+    return extras
 
 
 # Metadaten für die Regel (optional, aber hilfreich für Dokumentation)

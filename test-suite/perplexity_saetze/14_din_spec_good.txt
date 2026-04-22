@@ -1,0 +1,4 @@
+# expected: pass
+# description: DIN SPEC 33429 exemplar of LS-compliant phrasing — short, active voice, named subject, everyday vocabulary.
+
+Die Sonne scheint warm.

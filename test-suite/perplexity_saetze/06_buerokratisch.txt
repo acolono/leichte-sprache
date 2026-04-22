@@ -1,4 +1,4 @@
-# expected: pass
-# description: Bureaucratic language but simple structure - vocabulary is handled by komplexitaet rule
+# expected: flag
+# description: Bureaucratic prepositional-attribute phrasing. DIN SPEC 33429 flags Verwaltungssprache; the perplexity signal catches the OOV bureaucratic vocabulary.
 
 Gemaess der Verwaltungsvorschrift ist die Antragstellung unter Beruecksichtigung saemtlicher Dokumentationspflichten fristgerecht einzureichen.

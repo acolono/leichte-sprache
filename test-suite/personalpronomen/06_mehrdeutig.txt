@@ -1,5 +1,5 @@
-# expected: pass
-# description: Clear pronoun with single referent
+# expected: flag
+# description: 3rd-person pronoun "Er" must be replaced with the noun per DIN SPEC 33429 §5.4.9, even with a single clear referent
 
 Der Mann geht nach Hause.
 Er ist muede.

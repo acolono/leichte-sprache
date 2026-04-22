@@ -1,0 +1,4 @@
+# expected: flag
+# description: Conditional wenn-Nebensatz. DIN SPEC 33429 and the Netzwerk-LS Regelwerk both discourage conditional subordinate clauses; the structural check catches the Nebensatz.
+
+Wenn Sie das Formular ausfuellen, erhalten Sie eine Antwort.

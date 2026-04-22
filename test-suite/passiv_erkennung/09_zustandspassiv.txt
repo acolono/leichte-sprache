@@ -1,4 +1,4 @@
-# expected: pass
-# description: Stative passive "ist geoeffnet" - typically not flagged
+# expected: flag
+# description: Zustandspassiv "ist geoeffnet" must be replaced per DIN SPEC 33429 §6.4 and Bredel/Maaß Hildesheim Regelbuch
 
 Das Geschaeft ist geoeffnet.

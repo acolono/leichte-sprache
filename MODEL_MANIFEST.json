@@ -1,6 +1,6 @@
 {
-  "version": "models-v1.0",
-  "github_release_tag": "models-v1.0",
+  "version": "models-v1.1",
+  "github_release_tag": "models-v1.1",
   "github_repo": "acolono/leichte-sprache",
   "tarball_name": "models.tar.gz",
   "files": {
@@ -16,8 +16,8 @@
       "sha256": "250eaef152fda91505d37b092c432347bb7747f7e9052df525647980011b2eeb",
       "size_bytes": 266315780
     },
-    "regeln/perplexity_saetze/perplexity_model.pkl": {
-      "sha256": "80c41bad7931361f5009f2323219c24063361ecdc76f7a629a0af6fe0ec8922d",
+    "regeln/perplexity_saetze/model/perplexity_model.pkl": {
+      "sha256": "e10b37b8b98f4bfce411a814c0552550b2d226cb3d3b297f574fb9528a5594ec",
       "size_bytes": 17177037
     }
   }

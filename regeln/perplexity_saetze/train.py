@@ -17,9 +17,6 @@ from nltk.lm import KneserNeyInterpolated
 from nltk.lm.preprocessing import padded_everygram_pipeline
 
 # Pfad zu diesem Modul
-import logging
-
-logger = logging.getLogger(__name__)
 MODULE_DIR = Path(__file__).parent
 
 
@@ -27,25 +24,25 @@ def ensure_nltk_data():
     try:
         nltk.data.find("tokenizers/punkt")
     except LookupError:
-        logger.info(" Lade NLTK-Daten...")
+        print("📥 Lade NLTK-Daten...")
         nltk.download("punkt")
         nltk.download("punkt_tab")
 
 
 def load_corpus(corpus_path):
     """Lädt Korpus schnell."""
-    logger.info(" Lade Korpus: %s", corpus_path)
+    print(f"📖 Lade Korpus: {corpus_path}")
     with open(corpus_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     sentences = [line.strip() for line in content.split("\n") if line.strip()]
-    logger.info(" %s Sätze geladen", len(sentences))
+    print(f"📝 {len(sentences)} Sätze geladen")
     return sentences
 
 
 def tokenize_sentences(sentences):
     """Verbesserte Tokenisierung."""
-    logger.info(" Tokenisiere...")
+    print("🔤 Tokenisiere...")
     tokenized = []
 
     for sentence in sentences:
@@ -56,28 +53,28 @@ def tokenize_sentences(sentences):
 
             if len(filtered) >= 3:
                 tokenized.append(filtered)
-        except Exception:
+        except:
             continue
 
-    logger.info(" %s Sätze tokenisiert", len(tokenized))
+    print(f"✅ {len(tokenized)} Sätze tokenisiert")
     return tokenized
 
 
 def train_model(tokenized_data, n_gram_size=3):
     """Trainiert Kneser-Ney Modell."""
-    logger.info(" Trainiere %s-Gramm Kneser-Ney Modell...", n_gram_size)
+    print(f"🏋️  Trainiere {n_gram_size}-Gramm Kneser-Ney Modell...")
 
     train_data, vocab = padded_everygram_pipeline(n_gram_size, tokenized_data)
     model = KneserNeyInterpolated(n_gram_size)
     model.fit(train_data, vocab)
 
-    logger.info(" Modell trainiert, Vokabular: %s", len(model.vocab))
+    print(f"✅ Modell trainiert, Vokabular: {len(model.vocab)}")
     return model
 
 
 def save_model(model, output_path):
     """Speichert Modell."""
-    logger.info(" Speichere Modell: %s", output_path)
+    print(f"💾 Speichere Modell: {output_path}")
 
     # Kalibrierte Schwellenwerte (basierend auf Tests)
     thresholds = {
@@ -98,13 +95,13 @@ def save_model(model, output_path):
     with open(output_path, "wb") as f:
         pickle.dump(metadata, f)
 
-    logger.info(" Modell gespeichert!")
+    print(f"✅ Modell gespeichert!")
     return metadata
 
 
 def demo_analysis(model):
     """Zeigt schnelle Demo."""
-    logger.info("\n Schnelle Beispiele:")
+    print("\n🔍 Schnelle Beispiele:")
 
     examples = [
         "der mann geht nach hause",
@@ -126,9 +123,9 @@ def demo_analysis(model):
                     if ppl < 15000
                     else "SEHR KOMPLEX"
                 )
-                logger.info(" '%s' → %.1f (%s)", sentence, ppl, complexity)
-        except Exception:
-            logger.error(" '%s' → Fehler", sentence)
+                print(f"  '{sentence}' → {ppl:.1f} ({complexity})")
+        except:
+            print(f"  '{sentence}' → Fehler")
 
 
 def main():
@@ -150,8 +147,8 @@ def main():
     )
     args = parser.parse_args()
 
-    logger.info(" Quick Perplexity Training")
-    logger.info("=" * 40)
+    print("🚀 Quick Perplexity Training")
+    print("=" * 40)
 
     # 1. Daten laden
     ensure_nltk_data()
@@ -169,11 +166,14 @@ def main():
     # 5. Demo
     demo_analysis(model)
 
-    logger.info("\n Verwende diese Schwellenwerte in regel_perplexity_saetze.py:")
-    logger.info(" THRESHOLD_KOMPLEX_SATZ = %s", metadata['thresholds']['THRESHOLD_KOMPLEX_SATZ'])
-    logger.info(" THRESHOLD_SEHR_KOMPLEX_SATZ = %s", metadata['thresholds']['THRESHOLD_SEHR_KOMPLEX_SATZ'])
+    print(f"\n💡 Verwende diese Schwellenwerte in regel_perplexity_saetze.py:")
+    print(
+        f"   THRESHOLD_KOMPLEX_SATZ = {metadata['thresholds']['THRESHOLD_KOMPLEX_SATZ']}"
+    )
+    print(
+        f"   THRESHOLD_SEHR_KOMPLEX_SATZ = {metadata['thresholds']['THRESHOLD_SEHR_KOMPLEX_SATZ']}"
+    )
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     main()

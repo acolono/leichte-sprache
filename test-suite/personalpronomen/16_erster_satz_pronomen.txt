@@ -1,4 +1,4 @@
-# expected: pass
-# description: Pronoun in first sentence has no previous context to check
+# expected: flag
+# description: Referential "Sie" (3rd-sing-fem) must be replaced per DIN SPEC 33429 §5.4.9, even without prior context
 
 Sie geht nach Hause.

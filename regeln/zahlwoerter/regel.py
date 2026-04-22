@@ -366,6 +366,28 @@ ZAHLWOERTER_0_50_MIT_FLEXIONEN = {
     ],
     # 50
     "fünfzig": ["fünfzig", "fünfzigste", "fünfzigsten", "fünfzigster", "fünfzigstes"],
+    # Large numbers (DIN SPEC 33429 §5.4.8: prefer digits over words)
+    "sechzig": ["sechzig", "sechzigste", "sechzigsten", "sechzigster"],
+    "siebzig": ["siebzig", "siebzigste", "siebzigsten", "siebzigster"],
+    "achtzig": ["achtzig", "achtzigste", "achtzigsten", "achtzigster"],
+    "neunzig": ["neunzig", "neunzigste", "neunzigsten", "neunzigster"],
+    "hundert": ["hundert", "hunderte", "hundertste", "hundertsten", "hundertster"],
+    "tausend": ["tausend", "tausende", "tausendste", "tausendsten", "tausendster"],
+    "million": ["million", "millionen", "millionste", "millionsten", "millionster"],
+    "milliarde": ["milliarde", "milliarden", "milliardste", "milliardsten"],
+    # Fractions: "ein Drittel", "ein Viertel", "eine Hälfte" — these are number
+    # words per DIN SPEC and should be digits ("1/3", "1/4", "1/2").
+    "hälfte": ["hälfte", "hälften"],
+    "drittel": ["drittel", "drittels"],
+    "viertel": ["viertel", "viertels"],
+    "fünftel": ["fünftel", "fünftels"],
+    "sechstel": ["sechstel", "sechstels"],
+    "siebtel": ["siebtel", "siebtels"],
+    "achtel": ["achtel", "achtels"],
+    "neuntel": ["neuntel", "neuntels"],
+    "zehntel": ["zehntel", "zehntels"],
+    "zwanzigstel": ["zwanzigstel", "zwanzigstels"],
+    "hundertstel": ["hundertstel", "hundertstels"],
 }
 
 

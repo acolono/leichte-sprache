@@ -1,5 +1,5 @@
-# expected: pass
-# description: Consistent Sie address form
+# expected: flag
+# description: Consistent polite Sie is fine, but referential "es" must be replaced (DIN SPEC 33429 §5.4.9)
 
 Sie koennen das Formular ausfuellen.
 Sie muessen es dann abgeben.

@@ -73,6 +73,21 @@ def check_rule(doc: Doc) -> List[str]:
                 processed_tokens.add(i)
 
     # =========================================================================
+    # REGEL 3: PRÄFIX-NEGATIONEN (DIN SPEC 33429 gap closure, configurable)
+    # =========================================================================
+    if getattr(config, "DETECT_PREFIX_NEGATION", False):
+        stoplist = getattr(config, "PREFIX_NEGATION_STOPLIST", set())
+        for token in doc:
+            if token.i in processed_tokens:
+                continue
+            if token.pos_ not in ("ADJ", "NOUN", "VERB"):
+                continue
+            hit = _detect_prefix_negation(token, stoplist)
+            if hit:
+                errors.append(hit)
+                processed_tokens.add(token.i)
+
+    # =========================================================================
     # DEDUPLIZIERUNG: Entferne doppelte Meldungen für gleiche Position
     # =========================================================================
     seen_messages = set()
@@ -190,6 +205,45 @@ def _analyze_negation_scope(negation_token: Token) -> Dict[str, str]:
             "scope": "allgemein",
             "vorschlag": "Formulieren Sie den Gedanken positiv um.",
         }
+
+
+_PREFIX_NEGATION_PREFIXES = ("un", "miss")
+_PREFIX_NEGATION_SUFFIXES = ("los", "frei")
+
+
+def _detect_prefix_negation(token: Token, stoplist: Set[str]) -> str:
+    """Detect prefix-based negations (un-, miss-) and suffixes (-los, -frei).
+
+    Returns a violation message or empty string. Stoplist suppresses common
+    lexicalized German words where un-/miss- is part of the stem, not a
+    negation prefix (e.g. 'Unfall', 'Mission').
+    """
+    lemma = token.lemma_.lower()
+    if lemma in stoplist or len(lemma) < 5:
+        return ""
+    # Prefix negations: un-/miss- attached to an adjective, noun, or verb.
+    # Require the remainder after the prefix to be a plausible stem (>=3 chars)
+    # and to start with a lowercase letter on the lemma.
+    for prefix in _PREFIX_NEGATION_PREFIXES:
+        if lemma.startswith(prefix) and len(lemma) > len(prefix) + 2:
+            remainder = lemma[len(prefix):]
+            # Only flag if the remainder would plausibly be a word
+            # (starts with a consonant or vowel, not a double letter that
+            # would signal fusion like 'unn-').
+            if remainder[0].isalpha():
+                return (
+                    f'Negationsform "{token.text}" erschwert das Verständnis. '
+                    f'Besser: Formulieren Sie positiv (zum Beispiel ohne '
+                    f'"{prefix}"-Präfix).'
+                )
+    for suffix in _PREFIX_NEGATION_SUFFIXES:
+        if lemma.endswith(suffix) and len(lemma) > len(suffix) + 2:
+            return (
+                f'Negationsform "{token.text}" erschwert das Verständnis. '
+                f'Besser: Formulieren Sie positiv (zum Beispiel ohne '
+                f'"-{suffix}"-Endung).'
+            )
+    return ""
 
 
 def _detect_complex_negations(doc: Doc) -> List[Dict]:

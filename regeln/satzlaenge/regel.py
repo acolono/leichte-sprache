@@ -11,8 +11,7 @@ from typing import Any, Dict, List, Tuple
 import spacy
 from spacy.tokens import Doc, Span
 
-# Import configuration (currently empty, for future extensions)
-from . import config  # noqa: F401
+from . import config
 
 import logging
 
@@ -233,13 +232,13 @@ def check_rule(doc: Doc) -> List[str]:
             }
         )
 
-        adaptive_limit = 10
+        adaptive_limit = config.MAX_WORDS_DEFAULT
         if complexity_score > 5.0:
-            adaptive_limit = 8
+            adaptive_limit = config.MAX_WORDS_HIGH
         elif complexity_score > 3.0:
-            adaptive_limit = 9
+            adaptive_limit = config.MAX_WORDS_MEDIUM
 
-        if word_count > adaptive_limit or complexity_score > 6.0:
+        if word_count > adaptive_limit or complexity_score > config.COMPLEXITY_TRIGGER:
             simplification = _generate_simplification_suggestion(
                 sent, word_count, factors
             )
@@ -263,10 +262,10 @@ def check_rule(doc: Doc) -> List[str]:
         if sentence_stats
         else 0
     )
-    if avg_length > 12:
+    if avg_length > config.MAX_MEAN_WORDS:
         errors.append(
             f"Durchschnittliche Satzlänge ist mit {avg_length:.1f} Wörtern zu hoch. "
-            f"Ziel: unter 10 Wörter pro Satz."
+            f"Ziel: unter {config.MAX_MEAN_WORDS} Wörter pro Satz."
         )
 
     return errors

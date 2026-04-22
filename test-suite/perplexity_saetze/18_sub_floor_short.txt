@@ -1,0 +1,4 @@
+# expected: pass
+# description: Very short utterance below the 10-char length floor. Verifies neither the structural check nor the perplexity signal crashes or flags on degenerate input.
+
+Ja.

@@ -177,10 +177,121 @@ def find_passive_constructions(doc: Doc) -> List[Tuple[str, str, int, int]]:
     passive_constructions = []
 
     for sent in doc.sents:
-        # Robust dependency-based passive detection
+        # Robust dependency-based passive detection (Vorgangspassiv)
         passive_constructions.extend(_detect_dependency_passive(sent))
+        # DIN SPEC 33429 §6.4 also bans Zustandspassiv and Passiversatzformen.
+        passive_constructions.extend(_detect_stative_passive(sent))
+        passive_constructions.extend(_detect_sein_zu_infinitive(sent))
+        passive_constructions.extend(_detect_sich_lassen(sent))
+        passive_constructions.extend(_detect_bar_adjective(sent))
 
     return passive_constructions
+
+
+def _detect_stative_passive(sent) -> List[Tuple[str, str, int, int]]:
+    """Zustandspassiv: sein (finite/AUX) + Partizip II as predicate.
+
+    Example: "Das Geschäft ist geöffnet." / "Die Tür war geschlossen."
+    Skip ADJECTIVAL_PARTICIPLES where the PP is lexicalized as adjective
+    (e.g., "entspannt", "begeistert") — those are not passive readings.
+    """
+    findings = []
+    for token in sent:
+        if not _is_past_participle(token):
+            continue
+        if token.lemma_ in ADJECTIVAL_PARTICIPLES:
+            continue
+        # Participle must be predicate (head or sibling of a sein-aux).
+        sein_verb = None
+        if _is_auxiliary_sein(token.head):
+            sein_verb = token.head
+        else:
+            for child in token.children:
+                if _is_auxiliary_sein(child):
+                    sein_verb = child
+                    break
+        if sein_verb is None:
+            continue
+        # Skip if this matches Perfekt-Passiv (worden is present — handled elsewhere).
+        if any(_is_auxiliary_werden(c) and c.lemma_ == "worden" for c in token.children):
+            continue
+        phrase = f"{sein_verb.text} {token.text}"
+        start_idx = min(sein_verb.idx, token.idx)
+        end_idx = max(sein_verb.idx + len(sein_verb.text), token.idx + len(token.text))
+        findings.append((phrase, "Zustandspassiv", start_idx, end_idx))
+    return findings
+
+
+def _detect_sein_zu_infinitive(sent) -> List[Tuple[str, str, int, int]]:
+    """Passiversatz 'sein + zu + Infinitiv': "Das Formular ist auszufüllen"."""
+    findings = []
+    for token in sent:
+        # Infinitive with zu marker. German spaCy tags this via tag_='VVIZU'
+        # (combined zu+infinitive) or with a PTKZU child.
+        is_zu_inf = token.tag_ == "VVIZU" or any(
+            c.tag_ == "PTKZU" for c in token.children if c.pos_ == "PART"
+        )
+        if not is_zu_inf:
+            continue
+        # Find a sein head (directly or through head chain, 1 level).
+        sein_verb = None
+        if _is_auxiliary_sein(token.head):
+            sein_verb = token.head
+        elif _is_auxiliary_sein(token.head.head):
+            sein_verb = token.head.head
+        if sein_verb is None:
+            continue
+        phrase = f"{sein_verb.text} … {token.text}"
+        start_idx = min(sein_verb.idx, token.idx)
+        end_idx = token.idx + len(token.text)
+        findings.append((phrase, "Passiversatz (sein+zu+Infinitiv)", start_idx, end_idx))
+    return findings
+
+
+def _detect_sich_lassen(sent) -> List[Tuple[str, str, int, int]]:
+    """Passiversatz 'sich + lassen + Infinitiv': "Das lässt sich lösen"."""
+    findings = []
+    for token in sent:
+        if token.lemma_.lower() != "lassen":
+            continue
+        if token.pos_ not in ("VERB", "AUX"):
+            continue
+        # Look for a reflexive 'sich' and an infinitive in the same clause.
+        has_sich = any(c.lower_ == "sich" for c in sent)
+        has_inf = any(
+            c.tag_ in ("VVINF", "VAINF", "VMINF") for c in sent
+        )
+        if has_sich and has_inf:
+            phrase = f"{token.text} sich …"
+            start_idx = token.idx
+            end_idx = token.idx + len(token.text)
+            findings.append((phrase, "Passiversatz (sich+lassen+Infinitiv)", start_idx, end_idx))
+            break
+    return findings
+
+
+def _detect_bar_adjective(sent) -> List[Tuple[str, str, int, int]]:
+    """Passiversatz '-bar'/'-abel' adjective derived from transitive verb.
+
+    Conservative: flag adjectives whose surface form ends in -bar/-abel and
+    whose lemma is a transitive verb or a -bar-derived adjective. Very
+    short stems are skipped to avoid 'klar', 'wunderbar', 'sichtbar' etc.
+    being over-flagged — we keep this lexical by surface length.
+    """
+    findings = []
+    for token in sent:
+        if token.pos_ != "ADJ":
+            continue
+        lower = token.text.lower()
+        if not (lower.endswith("bar") or lower.endswith("abel")):
+            continue
+        if len(lower) < 7:  # avoid 'klar', 'bar', etc.
+            continue
+        phrase = token.text
+        start_idx = token.idx
+        end_idx = token.idx + len(token.text)
+        findings.append((phrase, "Passiversatz (-bar/-abel)", start_idx, end_idx))
+    return findings
 
 
 def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
@@ -195,7 +306,7 @@ def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
         if token.lemma_ == "werden" and token.pos_ == "AUX":
             # Search children for Partizip II
             for child in token.children:
-                if _is_past_participle(child) and child.lemma_ not in ADJECTIVAL_PARTICIPLES:
+                if _is_past_participle(child):
                     passive_phrase = f"{token.text} {child.text}"
                     passive_findings.append(
                         (
@@ -218,7 +329,7 @@ def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
                 if child.lemma_ == "worden" and child.tag_ == "VAPP":
                     worden_child = child
                 elif (
-                    _is_past_participle(child) and child.lemma_ not in ADJECTIVAL_PARTICIPLES
+                    _is_past_participle(child)
                 ):
                     participle_child = child
 
@@ -227,7 +338,6 @@ def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
                 for grandchild in worden_child.children:
                     if (
                         _is_past_participle(grandchild)
-                        and grandchild.lemma_ not in ADJECTIVAL_PARTICIPLES
                     ):
                         participle_child = grandchild
                         break
@@ -276,7 +386,7 @@ def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
                 if child.lemma_ == "werden" and child.tag_ in ["VAINF", "VVINF"]:
                     werden_inf_child = child
                 elif (
-                    _is_past_participle(child) and child.lemma_ not in ADJECTIVAL_PARTICIPLES
+                    _is_past_participle(child)
                 ):
                     participle_child = child
 
@@ -285,7 +395,6 @@ def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
                 for grandchild in werden_inf_child.children:
                     if (
                         _is_past_participle(grandchild)
-                        and grandchild.lemma_ not in ADJECTIVAL_PARTICIPLES
                     ):
                         participle_child = grandchild
                         break
@@ -317,7 +426,7 @@ def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
                 if child.lemma_ == "werden" and child.tag_ in ["VAINF", "VVINF"]:
                     werden_inf_child = child
                 elif (
-                    _is_past_participle(child) and child.lemma_ not in ADJECTIVAL_PARTICIPLES
+                    _is_past_participle(child)
                 ):
                     participle_child = child
 
@@ -326,7 +435,6 @@ def _detect_dependency_passive(sent) -> List[Tuple[str, str, int, int]]:
                 for grandchild in werden_inf_child.children:
                     if (
                         _is_past_participle(grandchild)
-                        and grandchild.lemma_ not in ADJECTIVAL_PARTICIPLES
                     ):
                         participle_child = grandchild
                         break

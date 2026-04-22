@@ -1,0 +1,4 @@
+# expected: flag
+# description: Scientific jargon in a short SVO sentence. Perplexity signal catches the domain vocabulary the LS corpus never sees.
+
+Die Zellmembran verhindert die Osmose.

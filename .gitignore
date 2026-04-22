@@ -65,6 +65,5 @@ regeln/*/model/**/*.safetensors
 **/.staging/
 **/.backup/
 
-# Internal planning and agent tooling — not for public repo
-.planning/
-.claude/
+# Generated training data (reproducible via scripts/convert_pronoun_dataset.py)
+regeln/personalpronomen/data/

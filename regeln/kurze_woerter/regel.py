@@ -4,8 +4,7 @@ import pyphen
 import spacy
 from spacy.tokens import Doc, Token
 
-# Import configuration (currently empty, for future extensions)
-from . import config  # noqa: F401
+from . import config
 
 # Initialize pyphen for the German language
 import logging
@@ -13,10 +12,11 @@ import logging
 logger = logging.getLogger(__name__)
 hyphenator = pyphen.Pyphen(lang="de_DE")
 
-# Configuration for word length analysis
-MAX_SYLLABLES = 4
-MAX_CHARS = 14
-COMPLEX_WORD_THRESHOLD = 5  # syllables
+# Thresholds come from config.py. DIN SPEC 33429:2025 §5.4.6 recommends
+# short words: max 3 syllables / max 12 characters for unhyphenated forms.
+MAX_SYLLABLES = config.MAX_SYLLABLES
+MAX_CHARS = config.MAX_CHARACTERS
+COMPLEX_WORD_THRESHOLD = config.COMPLEX_WORDS_THRESHOLD
 
 
 def check_rule(doc: Doc) -> List[str]:

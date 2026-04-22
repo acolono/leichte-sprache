@@ -152,6 +152,157 @@ REDEWENDUNGEN: Dict[str, Dict[str, Any]] = {
         "schwierigkeit": 0.7,
         "kategorie": "scheitern",
     },
+    # --- Wave 3 expansion (DIN SPEC 33429 §5.6.1 "avoid figurative language") ---
+    "das ist ein klacks": {
+        "alternative": "das ist einfach",
+        "schwierigkeit": 0.6,
+        "kategorie": "einfach",
+    },
+    "einen dämpfer bekommen": {
+        "alternative": "enttäuscht werden",
+        "schwierigkeit": 0.7,
+        "kategorie": "gefühl",
+    },
+    "sich aus dem staub machen": {
+        "alternative": "heimlich weggehen",
+        "schwierigkeit": 0.8,
+        "kategorie": "gehen",
+    },
+    "den vogel abschießen": {
+        "alternative": "am besten sein",
+        "schwierigkeit": 0.8,
+        "kategorie": "erfolg",
+    },
+    "den ton angeben": {
+        "alternative": "bestimmen, was passiert",
+        "schwierigkeit": 0.8,
+        "kategorie": "macht",
+    },
+    "jemanden durch den kakao ziehen": {
+        "alternative": "jemanden verspotten",
+        "schwierigkeit": 0.9,
+        "kategorie": "spott",
+    },
+    "ein heißes eisen": {
+        "alternative": "ein heikles Thema",
+        "schwierigkeit": 0.8,
+        "kategorie": "konflikt",
+    },
+    "unter den teppich kehren": {
+        "alternative": "verbergen",
+        "schwierigkeit": 0.8,
+        "kategorie": "verbergen",
+    },
+    "kalte füße bekommen": {
+        "alternative": "Angst bekommen",
+        "schwierigkeit": 0.8,
+        "kategorie": "gefühl",
+    },
+    "öl ins feuer gießen": {
+        "alternative": "den Streit verschlimmern",
+        "schwierigkeit": 0.8,
+        "kategorie": "konflikt",
+    },
+    "die rechnung ohne den wirt machen": {
+        "alternative": "etwas falsch einschätzen",
+        "schwierigkeit": 0.9,
+        "kategorie": "fehler",
+    },
+    "etwas aus dem ärmel schütteln": {
+        "alternative": "etwas schnell und leicht machen",
+        "schwierigkeit": 0.8,
+        "kategorie": "einfach",
+    },
+    "auf die pauke hauen": {
+        "alternative": "laut feiern",
+        "schwierigkeit": 0.8,
+        "kategorie": "feiern",
+    },
+    "mit allen wassern gewaschen": {
+        "alternative": "sehr erfahren",
+        "schwierigkeit": 0.9,
+        "kategorie": "erfahrung",
+    },
+    "die kirche im dorf lassen": {
+        "alternative": "nicht übertreiben",
+        "schwierigkeit": 0.8,
+        "kategorie": "maß",
+    },
+    "am ball bleiben": {
+        "alternative": "weiter aktiv bleiben",
+        "schwierigkeit": 0.7,
+        "kategorie": "beharrlichkeit",
+    },
+    "jemanden auf den arm nehmen": {
+        "alternative": "jemanden zum Spaß ärgern",
+        "schwierigkeit": 0.8,
+        "kategorie": "spott",
+    },
+    "aus allen wolken fallen": {
+        "alternative": "sehr überrascht sein",
+        "schwierigkeit": 0.8,
+        "kategorie": "überraschung",
+    },
+    "auf des messers schneide stehen": {
+        "alternative": "sehr unsicher sein",
+        "schwierigkeit": 0.9,
+        "kategorie": "unsicher",
+    },
+    "in den sauren apfel beißen": {
+        "alternative": "eine unangenehme Sache erledigen",
+        "schwierigkeit": 0.8,
+        "kategorie": "unangenehm",
+    },
+    "zwischen den zeilen lesen": {
+        "alternative": "die versteckte Bedeutung erkennen",
+        "schwierigkeit": 0.8,
+        "kategorie": "verstehen",
+    },
+    "jemandem einen bären aufbinden": {
+        "alternative": "jemanden anlügen",
+        "schwierigkeit": 0.9,
+        "kategorie": "lügen",
+    },
+    "in saus und braus leben": {
+        "alternative": "sehr aufwendig leben",
+        "schwierigkeit": 0.9,
+        "kategorie": "leben",
+    },
+    "ein auge zudrücken": {
+        "alternative": "etwas nicht streng bestrafen",
+        "schwierigkeit": 0.7,
+        "kategorie": "nachsicht",
+    },
+    "das blaue vom himmel versprechen": {
+        "alternative": "unmögliche Dinge versprechen",
+        "schwierigkeit": 0.9,
+        "kategorie": "lügen",
+    },
+    "sich etwas aus den fingern saugen": {
+        "alternative": "etwas erfinden",
+        "schwierigkeit": 0.8,
+        "kategorie": "lügen",
+    },
+    "jemanden auf die palme bringen": {
+        "alternative": "jemanden wütend machen",
+        "schwierigkeit": 0.8,
+        "kategorie": "wut",
+    },
+    "jemandem reinen wein einschenken": {
+        "alternative": "die Wahrheit sagen",
+        "schwierigkeit": 0.9,
+        "kategorie": "wahrheit",
+    },
+    "klar schiff machen": {
+        "alternative": "aufräumen und Ordnung schaffen",
+        "schwierigkeit": 0.8,
+        "kategorie": "ordnung",
+    },
+    "von der stange": {
+        "alternative": "nicht besonders",
+        "schwierigkeit": 0.7,
+        "kategorie": "qualität",
+    },
 }
 
 FIGURATIVE_EXPRESSIONS = {

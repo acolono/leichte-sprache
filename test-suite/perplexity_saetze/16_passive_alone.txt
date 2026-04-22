@@ -1,0 +1,4 @@
+# expected: flag
+# description: Passive construction in an otherwise short simple sentence. DIN SPEC 33429 forbids Vorgangspassiv in Leichte Sprache.
+
+Der Antrag wird bearbeitet.

@@ -85,29 +85,6 @@ ALL_ALLOWED_CHARACTERS = (
     | TECHNICAL_CHARACTERS
 )
 
-# Kontexte wo Doppelpunkt/Komma AKZEPTABEL sind
-ACCEPTABLE_CONTEXTS = {
-    "zeit": ["uhr", "h", "stunde", "minute", "sekunde"],  # 14:30 Uhr
-    "liste": [
-        "punkte",
-        "punkt",
-        "schritte",
-        "schritt",
-        "regeln",
-        "regel",
-        "beispiele",
-        "beispiel",
-        "folgende",
-        "sind",
-        "genannt",
-        "lauten",
-        "teams",
-        "team",
-    ],
-    "definition": ["das ist", "bedeutet", "heißt", "erklärt"],  # Das heißt:
-    "zitat": ["sagte", "meinte", "erklärte", "antwortete"],  # Er sagte:
-}
-
 MAX_COMMAS_PER_SENTENCE = 2  # Maximum 2 commas per sentence in Leichte Sprache
 
 # =========================================================================
@@ -325,68 +302,6 @@ def classify_forbidden_character(zeichen: str) -> Dict[str, str]:
         "kategorie": kategorie,
         "vorschlag": vorschlag,
     }
-
-
-# =========================================================================
-# KONTEXT-PRÜFUNG FÜR DOPPELPUNKT UND KOMMA
-# =========================================================================
-
-
-def is_context_acceptable(token: Token) -> bool:
-    """
-    Checks if a context-dependent character (: or ,) is acceptable.
-    """
-    zeichen = token.text
-    doc = token.doc
-
-    # --- DOPPELPUNKT : ---
-    if zeichen == ":":
-        sent_start = token.sent.start
-
-        # Sammle 5 Wörter VOR dem Doppelpunkt (index-basiert)
-        words_before = []
-        for i in range(max(sent_start, token.i - 10), token.i):
-            t = doc[i]
-            if not t.is_punct and not t.is_space:
-                words_before.append(t.text.lower())
-                if len(words_before) >= 5:
-                    break
-        words_before = words_before[-5:]  # Nur letzte 5
-
-        # Sammle 5 Wörter NACH dem Doppelpunkt
-        sent_end = token.sent.end
-        words_after = []
-        for i in range(token.i + 1, min(sent_end, token.i + 11)):
-            t = doc[i]
-            if not t.is_punct and not t.is_space:
-                words_after.append(t.text.lower())
-                if len(words_after) >= 5:
-                    break
-
-        context_words = words_before + words_after
-
-        # Zeit: "14:30", "um 15:00 Uhr"
-        if any(word in ACCEPTABLE_CONTEXTS["zeit"] for word in context_words):
-            return True
-
-        # Listen/Aufzählungen: "Folgende Teams sind involviert:"
-        if any(word in ACCEPTABLE_CONTEXTS["liste"] for word in words_before):
-            return True
-
-        # Definitionen: "Das bedeutet:", "Das heißt:"
-        sent_text = token.sent.text.lower()
-        if any(phrase in sent_text for phrase in ACCEPTABLE_CONTEXTS["definition"]):
-            return True
-
-        # Zitate: "Er sagte:", "Sie meinte:"
-        if any(word in ACCEPTABLE_CONTEXTS["zitat"] for word in context_words):
-            return True
-
-    # --- KOMMA , ---
-    # Kommas sind akzeptabel, aber maximal 2 pro Satz
-    # Die Prüfung erfolgt in analyze_comma_structures()
-
-    return False
 
 
 # =========================================================================

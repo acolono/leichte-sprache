@@ -1,4 +1,4 @@
-# expected: pass
-# description: Technical jargon but simple structure - vocabulary is handled by komplexitaet rule
+# expected: flag
+# description: Technical jargon — off-register for Leichte Sprache. Flagged by the perplexity signal's OOV check against the LS-corpus vocabulary.
 
 Die Implementation der systemischen Infrastrukturoptimierung erfordert eine umfassende Evaluierung der prozessualen Rahmenbedingungen.

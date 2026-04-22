@@ -1,5 +1,5 @@
-# expected: pass
-# description: Single noun referent in previous sentence - no ambiguity
+# expected: flag
+# description: Even with a single clear referent, "Er" must be replaced per DIN SPEC 33429 §5.4.9
 
 Der Mann geht nach Hause.
 Er ist muede.
