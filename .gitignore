@@ -12,8 +12,6 @@ __pycache__/
 leichte_sprache_venv
 /dev
 /.idea
-/textkomplexitaet/data/models--MiriUll--distilbert-german-text-complexity
-/textkomplexitaet/data/.locks
 
 # ============================================================================
 # BERT Models & ML Artifacts (CRITICAL: Verhindert Upload großer Modelle!)
@@ -72,3 +70,9 @@ regeln/personalpronomen/data/
 # These stay local — the public repo tracks code + tests + docs only.
 /.planning/
 /.claude/
+
+# HuggingFace cache for the komplexitaet rule's DistilBERT (MiriUll).
+# Auto-downloaded on first inference; not a source artefact. Replaces an
+# earlier top-level /textkomplexitaet/data/... rule that went dead when
+# the package was moved into regeln/komplexitaet/ (commit e1c71d6).
+regeln/**/textkomplexitaet/data/
