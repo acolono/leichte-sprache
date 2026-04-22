@@ -67,3 +67,8 @@ regeln/*/model/**/*.safetensors
 
 # Generated training data (reproducible via scripts/convert_pronoun_dataset.py)
 regeln/personalpronomen/data/
+
+# Internal planning/research artefacts (GSD workflow, rule-research, plans).
+# These stay local — the public repo tracks code + tests + docs only.
+/.planning/
+/.claude/
