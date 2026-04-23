@@ -43,15 +43,70 @@ def build_download_url(repo: str, tag: str, tarball_name: str) -> str:
     return f"https://github.com/{repo}/releases/download/{tag}/{tarball_name}"
 
 
-def download_file(url: str, dest: Path) -> None:
-    """Download URL to dest path with a Rich progress bar."""
+def _build_request(url: str, token: str | None) -> urllib.request.Request:
+    """Build an authenticated request for GitHub release assets.
+
+    Release assets on private repos need `Accept: application/octet-stream`
+    plus a bearer token; `api.github.com/repos/.../releases/assets/{id}` is
+    the auth-safe endpoint. The public `github.com/.../releases/download/...`
+    URL redirects to signed S3, but authenticated clients must hit the API
+    endpoint directly — see https://docs.github.com/en/rest/releases/assets.
+    """
+    req = urllib.request.Request(url)
+    if token:
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("Accept", "application/octet-stream")
+        req.add_header("X-GitHub-Api-Version", "2022-11-28")
+    return req
+
+
+def _resolve_asset_api_url(repo: str, tag: str, tarball_name: str, token: str) -> str:
+    """Translate (repo, tag, asset-name) into the asset API URL for private repos."""
+    api_url = f"https://api.github.com/repos/{repo}/releases/tags/{tag}"
+    req = urllib.request.Request(api_url)
+    req.add_header("Authorization", f"Bearer {token}")
+    req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("X-GitHub-Api-Version", "2022-11-28")
+    with urllib.request.urlopen(req) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    for asset in data.get("assets", []):
+        if asset["name"] == tarball_name:
+            return asset["url"]  # canonical asset API URL
+    raise RuntimeError(
+        f"Asset {tarball_name!r} not found in release {tag} on {repo}"
+    )
+
+
+def download_file(url: str, dest: Path, token: str | None = None) -> None:
+    """Download URL to dest path with a Rich progress bar.
+
+    If a token is provided and the initial URL is the public download URL,
+    resolve to the API asset URL (which accepts bearer auth for private
+    repos). The public URL returns 404 for anonymous clients on private
+    repos, and 302 → S3 for public or authenticated clients.
+    """
     try:
-        response = urllib.request.urlopen(url)
+        req = _build_request(url, token)
+        response = urllib.request.urlopen(req)
     except urllib.error.HTTPError as e:
         if e.code == 404:
+            if not token:
+                print(
+                    "Error: Release not found. The repo may be private — "
+                    "set GITHUB_TOKEN (or GH_TOKEN) with contents:read and retry. "
+                    "If the repo is public, the release may not have been created yet "
+                    "(run scripts/upload_release.sh)."
+                )
+            else:
+                print(
+                    "Error: Release not found even with auth. Check the tag "
+                    "and repo slug in MODEL_MANIFEST.json."
+                )
+            sys.exit(1)
+        if e.code in (401, 403):
             print(
-                "Error: Release not found. Has the release been created? "
-                "Run: scripts/upload_release.sh"
+                f"Error: GitHub returned {e.code}. The GITHUB_TOKEN may be "
+                "missing, expired, or lack contents:read scope on this repo."
             )
             sys.exit(1)
         raise
@@ -163,6 +218,7 @@ def main() -> None:
     repo = args.repo or manifest["github_repo"]
     tag = args.tag or manifest["github_release_tag"]
     tarball_name = manifest.get("tarball_name", "models.tar.gz")
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
 
     # Check existing files unless --force
     if not args.force:
@@ -172,8 +228,23 @@ def main() -> None:
             sys.exit(0)
         print()
 
-    url = build_download_url(repo, tag, tarball_name)
-    print(f"Downloading from: {url}")
+    if token:
+        # Resolve to the API asset URL — the only URL that accepts bearer auth
+        # for private-repo release assets.
+        try:
+            url = _resolve_asset_api_url(repo, tag, tarball_name, token)
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404):
+                print(
+                    f"Error: GitHub returned {e.code} resolving asset URL. "
+                    "Check GITHUB_TOKEN scope (contents:read) and the repo slug + tag."
+                )
+                sys.exit(1)
+            raise
+        print(f"Downloading (authenticated) from: {url}")
+    else:
+        url = build_download_url(repo, tag, tarball_name)
+        print(f"Downloading (anonymous) from: {url}")
 
     # Download to temp file
     tmp_file = None
@@ -182,7 +253,7 @@ def main() -> None:
         tmp_file = Path(tmp_fd.name)
         tmp_fd.close()
 
-        download_file(url, tmp_file)
+        download_file(url, tmp_file, token)
 
         extract_tarball(tmp_file, PROJECT_ROOT)
     except KeyboardInterrupt:
