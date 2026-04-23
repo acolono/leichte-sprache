@@ -19,7 +19,7 @@ import uvicorn  # noqa: E402
 from fastapi import FastAPI, HTTPException, Query  # noqa: E402
 from pydantic import BaseModel, ConfigDict, Field  # noqa: E402
 
-from analysis_service import analyse_text  # noqa: E402
+from analysis_service import analyse_text, get_loaded_rule_count  # noqa: E402
 
 # Generator imports (optional - only if pydantic-ai and LLM provider packages are available)
 try:
@@ -116,10 +116,7 @@ async def lifespan(app: FastAPI):
         test_result = analyse_text("Startup Test")
         if "error" not in test_result:
             logger.info("Service erfolgreich initialisiert")
-            logger.info(
-                "%d Regeln verfügbar",
-                len(test_result.get("statistics", {}).get("violations_by_rule", {})),
-            )
+            logger.info("%d Regeln geladen", get_loaded_rule_count())
         else:
             logger.warning("Service-Warnung: %s", test_result["error"])
     except Exception as e:

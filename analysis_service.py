@@ -124,6 +124,12 @@ class SimpleLangAnalyzer:
 
         return loaded_rules
 
+    def get_loaded_rule_count(self) -> int:
+        """Return the number of rules successfully loaded. Lazy-loads rules if needed."""
+        if not self.rules:
+            self._load_rules()
+        return len(self.rules)
+
     def _extract_problematic_terms(
         self, message: str, text: str
     ) -> List[Tuple[str, int, int]]:
@@ -514,6 +520,14 @@ def analyse_text(text: str) -> Dict[str, Any]:
         _analyzer = SimpleLangAnalyzer()
 
     return _analyzer.analyse_text(text)
+
+
+def get_loaded_rule_count() -> int:
+    """Public API helper — returns the number of loaded rules on the singleton analyser."""
+    global _analyzer
+    if _analyzer is None:
+        _analyzer = SimpleLangAnalyzer()
+    return _analyzer.get_loaded_rule_count()
 
 
 if __name__ == "__main__":
