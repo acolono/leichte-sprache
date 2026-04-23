@@ -18,5 +18,18 @@ docs
 *.md
 !README.md
 compose.yaml
-regeln/*/model/
+
+# Large ML model weights come from the tarball downloaded in the builder
+# stage, not from the local build context. Exclude only the weights; keep
+# git-tracked configs and tokenizer JSONs so AbbreviationModel and
+# PronounModel can load inside the container.
+regeln/*/model/*.safetensors
+regeln/*/model/*.pt
+regeln/*/model/*.pkl
+regeln/*/model/**/pytorch_model.bin
+
+# Local dev artefacts (never shipped, never used at runtime)
+regeln/*/model/.staging/
+regeln/*/model/.backup/
+
 scripts/upload_release.sh
