@@ -26,6 +26,22 @@ RUN uv export --frozen --no-dev --no-emit-project --no-hashes --no-annotate \
 # Layer 2: spaCy German model (baked into image)
 RUN python -m spacy download de_core_news_lg
 
+# Layer 2b: Pre-fetch Hugging Face Hub base models that the rules call
+# `from_pretrained(<hub-id>)` for at runtime. Without this layer the
+# container needs outbound access to huggingface.co on first request,
+# and an offline runtime trips obscure errors like
+# "stat: path should be ... not NoneType" inside huggingface_hub.
+# Targets:
+#   - bert-base-german-cased      (mehrere_aussagen, personalpronomen)
+#   - fefeefef/leichte-sprache-zahlwoerter  (zahlwoerter fallback)
+RUN python - <<'PY'
+from transformers import AutoModel, AutoTokenizer, AutoModelForTokenClassification
+AutoTokenizer.from_pretrained("bert-base-german-cased")
+AutoModel.from_pretrained("bert-base-german-cased")
+AutoTokenizer.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
+AutoModelForTokenClassification.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
+PY
+
 # Layer 3: ML models from GitHub Releases (cached unless manifest changes).
 # If MODEL_MANIFEST.json points to a private repo, pass a token via BuildKit secret:
 #   DOCKER_BUILDKIT=1 docker build --secret id=github_token,env=GITHUB_TOKEN .
@@ -44,6 +60,10 @@ WORKDIR /app
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
+
+# Copy the Hugging Face cache populated in the builder so the rules can run
+# fully offline (no huggingface.co reachability required at request time).
+COPY --from=builder /root/.cache/huggingface /root/.cache/huggingface
 
 # Copy application code
 COPY api_main.py analysis_service.py config.py ./
