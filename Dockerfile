@@ -34,6 +34,11 @@ RUN python -m spacy download de_core_news_lg
 # Targets:
 #   - bert-base-german-cased      (mehrere_aussagen, personalpronomen)
 #   - fefeefef/leichte-sprache-zahlwoerter  (zahlwoerter fallback)
+# Use an explicit cache location that does not depend on $HOME — that way
+# the cache also works when the runtime container starts as a non-root user
+# or with HOME unset (a common k8s/podman default), instead of falling back
+# to "~" → "" and triggering the None-path stat crash inside huggingface_hub.
+ENV HF_HOME=/opt/huggingface
 RUN python - <<'PY'
 from transformers import AutoModel, AutoTokenizer, AutoModelForTokenClassification
 AutoTokenizer.from_pretrained("bert-base-german-cased")
@@ -41,6 +46,8 @@ AutoModel.from_pretrained("bert-base-german-cased")
 AutoTokenizer.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
 AutoModelForTokenClassification.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
 PY
+# Make the cache readable for any uid the runtime container ends up running as.
+RUN chmod -R a+rX /opt/huggingface
 
 # Layer 3: ML models from GitHub Releases (cached unless manifest changes).
 # If MODEL_MANIFEST.json points to a private repo, pass a token via BuildKit secret:
@@ -63,7 +70,10 @@ COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 
 # Copy the Hugging Face cache populated in the builder so the rules can run
 # fully offline (no huggingface.co reachability required at request time).
-COPY --from=builder /root/.cache/huggingface /root/.cache/huggingface
+# HF_HOME is fixed to a $HOME-independent path so the cache also works when
+# the container runs as a non-root user.
+ENV HF_HOME=/opt/huggingface
+COPY --from=builder /opt/huggingface /opt/huggingface
 
 # Copy application code
 COPY api_main.py analysis_service.py config.py ./
