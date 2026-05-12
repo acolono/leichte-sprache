@@ -11,7 +11,7 @@ dependencies = [
     "german-compound-splitter",
     "germalemma>=0.1.3",
     "loguru>=0.7.3",
-    "mistralai",
+    "mistralai>=1.12.4",
     "nltk>=3.9.2",
     "numpy>=2.0.0",
     "ollama",
@@ -58,6 +58,9 @@ explicit = true
 [tool.uv.sources]
 de-core-news-lg = { url = "https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl" }
 german-compound-splitter = { git = "https://github.com/repodiac/german_compound_splitter" }
+# PyPI quarantined the `mistralai` project (all versions inaccessible via the simple index),
+# so install the SDK directly from the upstream GitHub repo instead.
+mistralai = { git = "https://github.com/mistralai/client-python", tag = "v1.12.4" }
 
 [tool.ruff]
 line-length = 88
