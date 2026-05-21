@@ -70,7 +70,12 @@ services:
   # Plus host ports 80 + 443 must be publicly reachable so Let's Encrypt's
   # HTTP-01 challenge can hit the host.
   traefik:
-    image: traefik:v3.5
+    # Pinned to v3.3 because v3.4/v3.5 probe Docker Swarm endpoints during
+    # provider startup; on Docker Desktop (notably macOS) those endpoints
+    # respond with HTTP 400 and Traefik flaps in a "Provider error,
+    # retrying in 10s" loop without ever wiring up routes. v3.3 only hits
+    # the classic docker provider endpoints and works on all daemons.
+    image: traefik:v3.3
     profiles: ["traefik"]
     ports:
       - "80:80"
@@ -85,6 +90,10 @@ services:
       - traefik-acme:/letsencrypt
     command:
       - "--providers.docker=true"
+      # Explicit socket path — disables Traefik's auto-detect dance which
+      # tries the docker-context / swarm / TCP endpoints in sequence and
+      # bails on the first 400. Required on Docker Desktop.
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
