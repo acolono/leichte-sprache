@@ -323,6 +323,90 @@ Beide Varianten erfordern **keinen** API-Key.
 
 ---
 
+## Reverse Proxy mit TLS (Traefik-Profil)
+
+Für Produktiv-Deployments liefert `compose.yaml` ein optionales `traefik`-Profil mit:
+
+- Traefik v3 als Reverse-Proxy auf Port 80 + 443
+- Automatische Let's-Encrypt-Zertifikate (HTTP-01 Challenge)
+- HTTP → HTTPS Redirect für alle Routen
+- Persistente ACME-State in einem Named Volume (überlebt Container-Recreate)
+- Auto-Discovery der `api`-Container per Docker-Label, kein extra Config-File
+
+### Voraussetzungen
+
+1. **Öffentliche FQDN** mit A/AAAA-Record auf den Host (z. B. `api.example.com`)
+2. **Ports 80 und 443 öffentlich erreichbar** — Let's Encrypts ACME-Server müssen die HTTP-01 Challenge auf Port 80 abrufen können
+3. **`.env` gesetzt:**
+   ```bash
+   TRAEFIK_DOMAIN=api.example.com
+   TRAEFIK_ACME_EMAIL=admin@example.com
+   ```
+
+### Starten
+
+```bash
+# .env vorbereiten + Image bauen (wie im Schnellstart)
+cp .env.example .env  # TRAEFIK_DOMAIN und TRAEFIK_ACME_EMAIL anpassen!
+export GITHUB_TOKEN=$(gh auth token)
+docker compose build
+
+# Stack inklusive Traefik hochfahren
+docker compose --profile traefik up -d
+
+# Status prüfen (api muss healthy sein, dann startet Traefik)
+docker compose --profile traefik ps
+
+# Erster Request über HTTPS (Let's Encrypt braucht ~30 s für das initiale Zert)
+curl https://api.example.com/health
+```
+
+Kombiniert mit Ollama:
+
+```bash
+docker compose --profile traefik --profile ollama up -d
+```
+
+### Sicherheitshinweis
+
+Im Default ist `api:8000` zusätzlich direkt auf Host-Port 8000 gemappt — bequem für lokale Entwicklung, in Produktion aber unerwünscht (HTTP ohne TLS, am Reverse-Proxy vorbei). Vor dem Produktiv-Deploy in `compose.yaml` die Zeile
+
+```yaml
+- "8000:8000"
+```
+
+auf
+
+```yaml
+- "127.0.0.1:8000:8000"
+```
+
+ändern (nur lokal erreichbar) **oder** komplett entfernen.
+
+### Während des Testens: Let's-Encrypt-Staging
+
+Let's Encrypt limitiert Production-Zertifikate auf 50 pro Domain und Woche. Beim Iterieren am Setup besser den Staging-Resolver verwenden — gleiche Mechanik, Zertifikate sind aber browser-untrusted. In `compose.yaml` beim `traefik`-Service die kommentierte Zeile aktivieren:
+
+```yaml
+- "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+```
+
+Dann ACME-State leeren und neu starten:
+
+```bash
+docker compose --profile traefik down
+docker volume rm leichte-sprache-rulez_traefik-acme
+docker compose --profile traefik up -d
+```
+
+### Aufräumen inkl. Zertifikate
+
+```bash
+docker compose --profile traefik down -v
+```
+
+---
+
 ## Entwicklung ohne Docker
 
 Für Beitragende, die auf dem eigenen Rechner arbeiten wollen:
