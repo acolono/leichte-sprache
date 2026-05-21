@@ -1157,12 +1157,25 @@ Gib NUR den vereinfachten Text zurück."""
                     model=self._model,
                     usage_limits=UsageLimits(request_limit=10),
                 )
-                current_text = gen_result.output.text
+                agent_final = gen_result.output.text
             except Exception as exc:
                 logger.warning(
                     "Generator error in iteration %d: %s", iteration + 1, exc
                 )
-                current_text = best_text or text
+                agent_final = None
+
+            # Prefer the agent's deterministically-tracked best (set by its
+            # analyze_text tool calls) over both the agent's final return
+            # value and the outer-loop fallback chain. The agent often drifts
+            # past its peak — or hits the inner request_limit before it can
+            # emit a structured output at all — and without this, an early
+            # error on iteration 1 silently rewinds to the unmodified original
+            # text, recording it as the iteration's result and triggering
+            # outer-loop stagnation against the worst possible baseline.
+            if deps.best_text and deps.best_violations < 999:
+                current_text = deps.best_text
+            else:
+                current_text = agent_final or best_text or text
 
             # --- Step 2: Deterministic analysis (authoritative) ---
             analysis = self._analyze(current_text)
