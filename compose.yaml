@@ -69,31 +69,64 @@ services:
   #   TRAEFIK_ACME_EMAIL   — contact email for Let's Encrypt
   # Plus host ports 80 + 443 must be publicly reachable so Let's Encrypt's
   # HTTP-01 challenge can hit the host.
+  # Docker socket proxy. Traefik talks to *this* over TCP instead of
+  # mounting /var/run/docker.sock directly. Two reasons:
+  #
+  #  1. **Compatibility.** On Docker Desktop / OrbStack / Colima the
+  #     unix socket is fronted by a VM proxy that returns non-standard
+  #     responses for some endpoints (swarm, info, system events),
+  #     making Traefik's docker provider flap with errors like
+  #     `Error response from daemon: ` (empty body) or
+  #     `API returned a 400 (Bad Request) but provided no error-message`.
+  #     The socket proxy normalizes responses and only forwards the
+  #     handful of endpoints we whitelist below.
+  #
+  #  2. **Security.** Anything with rw access to the docker socket is
+  #     effectively root on the host (it can start privileged
+  #     containers, mount /, etc.). With the proxy in between, Traefik
+  #     can read container labels and watch events but cannot create or
+  #     modify containers.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    profiles: ["traefik"]
+    environment:
+      # Endpoints Traefik actually uses. Everything else 403s.
+      CONTAINERS: 1
+      NETWORKS: 1
+      SERVICES: 1
+      TASKS: 1
+      # Traefik's `cli.ServerVersion()` probes /version and /info.
+      INFO: 1
+      VERSION: 1
+      # Event stream for hot-reload when containers come and go.
+      EVENTS: 1
+      # Leave swarm OFF — we are single-host. This avoids the swarm
+      # endpoint quirks that broke v3.4/v3.5 in the first place.
+      SWARM: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+
   traefik:
-    # Pinned to v3.3 because v3.4/v3.5 probe Docker Swarm endpoints during
-    # provider startup; on Docker Desktop (notably macOS) those endpoints
-    # respond with HTTP 400 and Traefik flaps in a "Provider error,
-    # retrying in 10s" loop without ever wiring up routes. v3.3 only hits
-    # the classic docker provider endpoints and works on all daemons.
+    # v3.3 was the last release before the swarm probe behavior that
+    # caused the original error on Docker Desktop. We could move back
+    # up to v3.5 now that the socket proxy hides the problematic
+    # endpoints — left at v3.3 for stability; bump deliberately.
     image: traefik:v3.3
     profiles: ["traefik"]
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      # Read-only docker socket so Traefik can discover containers by their
-      # labels. Read-only is critical — anything with write access to the
-      # docker socket has root on the host.
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       # Persistent ACME state. Without this, certs are re-issued on every
       # restart and you hit Let's Encrypt rate limits (50 certs / week / domain).
       - traefik-acme:/letsencrypt
     command:
       - "--providers.docker=true"
-      # Explicit socket path — disables Traefik's auto-detect dance which
-      # tries the docker-context / swarm / TCP endpoints in sequence and
-      # bails on the first 400. Required on Docker Desktop.
-      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      # Talk to the proxy over the compose network instead of the host
+      # socket. Port 2375 is the proxy's default plaintext-HTTP listener;
+      # safe because it's not exposed outside the compose network.
+      - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
@@ -109,6 +142,8 @@ services:
       # - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
     restart: unless-stopped
     depends_on:
+      docker-socket-proxy:
+        condition: service_started
       api:
         condition: service_healthy
 
