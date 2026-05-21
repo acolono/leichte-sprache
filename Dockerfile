@@ -26,36 +26,45 @@ RUN uv export --frozen --no-dev --no-emit-project --no-hashes --no-annotate \
 # Layer 2: spaCy German model (baked into image)
 RUN python -m spacy download de_core_news_lg
 
-# Layer 2b: Pre-fetch Hugging Face Hub base models that the rules call
-# `from_pretrained(<hub-id>)` for at runtime. Without this layer the
-# container needs outbound access to huggingface.co on first request,
-# and an offline runtime trips obscure errors like
+# Layer 2b: Pre-fetch Hugging Face Hub assets the rules need at runtime.
+# Without this layer the container needs outbound access to huggingface.co
+# on first request, and an offline runtime trips obscure errors like
 # "stat: path should be ... not NoneType" inside huggingface_hub.
+#
 # Targets:
 #   - bert-base-german-cased                       (mehrere_aussagen, personalpronomen)
-#   - fefeefef/leichte-sprache-zahlwoerter         (zahlwoerter fallback)
-#   - MiriUll/distilbert-german-text-complexity    (komplexitaet) — uses an
-#       explicit `cache_dir=regeln/komplexitaet/textkomplexitaet/data` in code,
-#       so we mirror that path here instead of relying on HF_HOME.
-# Use an explicit cache location that does not depend on $HOME — that way
-# the cache also works when the runtime container starts as a non-root user
-# or with HOME unset (a common k8s/podman default), instead of falling back
-# to "~" → "" and triggering the None-path stat crash inside huggingface_hub.
+#       — into HF_HOME cache. Also used to backfill the abkuerzungen and
+#       mehrere_aussagen tokenizer assets after the GitHub-release tarball
+#       extract (the tarball ships only fine-tuned weights, not vocab.txt /
+#       tokenizer.json).
+#   - MiriUll/distilbert-german-text-complexity    (komplexitaet)
+#       — uses an explicit `cache_dir=regeln/komplexitaet/textkomplexitaet/data`
+#       in code, so we mirror that path here instead of relying on HF_HOME.
+#   - fefeefef/leichte-sprache-zahlwoerter         (zahlwoerter)
+#       — `snapshot_download`ed straight into the rule's local model dir so
+#       the rule's tier-1 (local-dir) loader resolves it. This avoids any
+#       HF Hub indirection at runtime and keeps every ML rule on the same
+#       "weights live under regeln/<rule>/model/" convention.
+#
+# HF_HOME is fixed to a $HOME-independent path so the cache also works when
+# the runtime container starts as a non-root user or with HOME unset
+# (a common k8s/podman default).
 ENV HF_HOME=/opt/huggingface
-RUN mkdir -p /app/regeln/komplexitaet/textkomplexitaet/data
+RUN mkdir -p /app/regeln/komplexitaet/textkomplexitaet/data /app/regeln/zahlwoerter/model
 RUN python - <<'PY'
+from huggingface_hub import snapshot_download
 from transformers import (
     AutoModel,
     AutoTokenizer,
-    AutoModelForTokenClassification,
     AutoModelForSequenceClassification,
 )
+
+# bert-base-german-cased → HF_HOME cache (also reused by the post-tarball
+# tokenizer backfill below).
 AutoTokenizer.from_pretrained("bert-base-german-cased")
 AutoModel.from_pretrained("bert-base-german-cased")
-AutoTokenizer.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
-AutoModelForTokenClassification.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
-# Mirror the cache_dir used by regeln/komplexitaet/textkomplexitaet/models.py
-# so the runtime image ships the DistilBERT complexity model offline-ready.
+
+# MiriUll DistilBERT → explicit cache_dir mirror.
 KOMPL_CACHE = "/app/regeln/komplexitaet/textkomplexitaet/data"
 AutoTokenizer.from_pretrained(
     "MiriUll/distilbert-german-text-complexity", cache_dir=KOMPL_CACHE
@@ -63,9 +72,19 @@ AutoTokenizer.from_pretrained(
 AutoModelForSequenceClassification.from_pretrained(
     "MiriUll/distilbert-german-text-complexity", cache_dir=KOMPL_CACHE
 )
+
+# zahlwoerter → flat snapshot into the rule's local model dir.
+# The rule loader (regeln/zahlwoerter/regel.py, NumberWordsModel._load_model)
+# checks `regeln/zahlwoerter/model/` first and only falls back to HF Hub if
+# the directory is empty. Materializing the snapshot locally short-circuits
+# the fallback and ships the weights as part of the image.
+snapshot_download(
+    repo_id="fefeefef/leichte-sprache-zahlwoerter",
+    local_dir="/app/regeln/zahlwoerter/model",
+)
 PY
 # Make the caches readable for any uid the runtime container ends up running as.
-RUN chmod -R a+rX /opt/huggingface /app/regeln/komplexitaet
+RUN chmod -R a+rX /opt/huggingface /app/regeln/komplexitaet /app/regeln/zahlwoerter
 
 # Layer 3: ML models from GitHub Releases (cached unless manifest changes).
 # If MODEL_MANIFEST.json points to a private repo, pass a token via BuildKit secret:
@@ -76,6 +95,43 @@ COPY scripts/ ./scripts/
 RUN --mount=type=secret,id=github_token,required=false \
     GITHUB_TOKEN="$(cat /run/secrets/github_token 2>/dev/null || true)" \
     python scripts/download_models.py
+
+# Layer 3b: Backfill missing tokenizer assets for `abkuerzungen` and
+# `mehrere_aussagen`. The models-v1.1 release tarball ships only the
+# fine-tuned weights (.safetensors / .bin); the BertTokenizer's
+# `vocab.txt` and `tokenizer.json` are NOT in the tarball and NOT
+# git-tracked (`.gitignore` excludes `**/vocab.txt` and
+# `**/tokenizer.json`). Without them, `AutoTokenizer.from_pretrained(
+# <local model dir>)` raises
+# `TypeError: stat: path should be string..., not NoneType`
+# because `vocab_file` resolves to None. Both rules are fine-tuned
+# from `bert-base-german-cased` (already prefetched into HF_HOME), so
+# copy that tokenizer's `vocab.txt` + `tokenizer.json` next to the
+# weights. Leave the rules' own `tokenizer_config.json` and
+# `special_tokens_map.json` untouched — they are git-tracked.
+RUN python - <<'PY'
+import shutil
+import tempfile
+from pathlib import Path
+from transformers import AutoTokenizer
+
+targets = [
+    Path("/app/regeln/abkuerzungen/model"),
+    Path("/app/regeln/mehrere_aussagen/model/models/stage_statement_classifier_best"),
+]
+
+with tempfile.TemporaryDirectory() as tmp:
+    AutoTokenizer.from_pretrained("bert-base-german-cased").save_pretrained(tmp)
+    for dst in targets:
+        if not dst.exists():
+            print(f"SKIP (no model dir): {dst}")
+            continue
+        for fn in ("vocab.txt", "tokenizer.json"):
+            src = Path(tmp) / fn
+            if src.exists():
+                shutil.copy(src, dst / fn)
+                print(f"Backfilled: {dst / fn}")
+PY
 
 # ---- Runtime stage: lean production image ----
 FROM python:3.12-slim
