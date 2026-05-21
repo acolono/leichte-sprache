@@ -22,6 +22,16 @@ services:
     env_file:
       - .env
     environment:
+      # LLM provider API keys for /generate. Pulled from the host shell
+      # env or project .env at compose-parse time via ${VAR:-} — unset
+      # vars become empty strings, never fail. /analyse works without
+      # any of these; api_main.py only returns HTTP 503 from /generate
+      # when the selected provider's key is missing.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       # Point at the in-network Ollama service when the `ollama` profile is up.
       # Harmless when the profile is off — requests with provider=ollama will
       # simply fail with a connection error instead of being silently misrouted.
