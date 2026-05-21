@@ -1,14 +1,85 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      # Build-time secret for scripts/download_models.py (private models release).
+      # Declared here so `docker compose build` (and the implicit build inside
+      # `docker compose up`) can mount $GITHUB_TOKEN without falling back to the
+      # anonymous-fetch path. Equivalent to:
+      #   DOCKER_BUILDKIT=1 docker build --secret id=github_token,env=GITHUB_TOKEN .
+      secrets:
+        - github_token
+    # Pin the image tag so a manual `docker build -t leichte-sprache-rulez-api:latest .`
+    # is reused by compose, and so subsequent ups don't silently rebuild without
+    # the secret (which would drop the 4 ML model files).
+    image: leichte-sprache-rulez-api:latest
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Point at the in-network Ollama service when the `ollama` profile is up.
+      # Harmless when the profile is off — requests with provider=ollama will
+      # simply fail with a connection error instead of being silently misrouted.
+      OLLAMA_BASE_URL: http://ollama:11434/v1
+      OLLAMA_HOST: http://ollama:11434
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
-      start_period: 60s
+      # 120s gives the first /analyse request enough headroom to lazy-load the
+      # 4 ML models (~1.1 GB combined) on slow disks without flapping unhealthy.
+      start_period: 120s
       retries: 3
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    volumes:
+      - ollama-data:/root/.ollama
+    # Not published to host by default — avoids conflict with a locally
+    # installed Ollama. Add a `ports:` entry yourself if you want host access.
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  # One-shot model warmer. Pulls the default Ollama model on first `up`,
+  # then exits. Subsequent ups are a no-op because the model is cached in
+  # the ollama-data volume.
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-mistral-nemo:12b}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if ollama list | awk 'NR>1 {print $$1}' | grep -qx "$$OLLAMA_DEFAULT_MODEL"; then
+          echo "model $$OLLAMA_DEFAULT_MODEL already present, skipping pull"
+        else
+          echo "pulling $$OLLAMA_DEFAULT_MODEL"
+          ollama pull "$$OLLAMA_DEFAULT_MODEL"
+        fi
+    restart: "no"
+
+volumes:
+  ollama-data:
+
+secrets:
+  # Build-time GitHub token used by scripts/download_models.py to fetch the
+  # private models release. Sourced from the host's $GITHUB_TOKEN env var
+  # (set via `export GITHUB_TOKEN=$(gh auth token)` before `docker compose
+  # build`). Compose v2.23+ supports `environment:` for build secrets;
+  # users on older Compose can swap this to `file: ./.github-token` and
+  # write the token to that file (gitignored) instead.
+  github_token:
+    environment: GITHUB_TOKEN

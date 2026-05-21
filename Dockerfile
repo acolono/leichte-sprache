@@ -32,22 +32,40 @@ RUN python -m spacy download de_core_news_lg
 # and an offline runtime trips obscure errors like
 # "stat: path should be ... not NoneType" inside huggingface_hub.
 # Targets:
-#   - bert-base-german-cased      (mehrere_aussagen, personalpronomen)
-#   - fefeefef/leichte-sprache-zahlwoerter  (zahlwoerter fallback)
+#   - bert-base-german-cased                       (mehrere_aussagen, personalpronomen)
+#   - fefeefef/leichte-sprache-zahlwoerter         (zahlwoerter fallback)
+#   - MiriUll/distilbert-german-text-complexity    (komplexitaet) — uses an
+#       explicit `cache_dir=regeln/komplexitaet/textkomplexitaet/data` in code,
+#       so we mirror that path here instead of relying on HF_HOME.
 # Use an explicit cache location that does not depend on $HOME — that way
 # the cache also works when the runtime container starts as a non-root user
 # or with HOME unset (a common k8s/podman default), instead of falling back
 # to "~" → "" and triggering the None-path stat crash inside huggingface_hub.
 ENV HF_HOME=/opt/huggingface
+RUN mkdir -p /app/regeln/komplexitaet/textkomplexitaet/data
 RUN python - <<'PY'
-from transformers import AutoModel, AutoTokenizer, AutoModelForTokenClassification
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+    AutoModelForTokenClassification,
+    AutoModelForSequenceClassification,
+)
 AutoTokenizer.from_pretrained("bert-base-german-cased")
 AutoModel.from_pretrained("bert-base-german-cased")
 AutoTokenizer.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
 AutoModelForTokenClassification.from_pretrained("fefeefef/leichte-sprache-zahlwoerter")
+# Mirror the cache_dir used by regeln/komplexitaet/textkomplexitaet/models.py
+# so the runtime image ships the DistilBERT complexity model offline-ready.
+KOMPL_CACHE = "/app/regeln/komplexitaet/textkomplexitaet/data"
+AutoTokenizer.from_pretrained(
+    "MiriUll/distilbert-german-text-complexity", cache_dir=KOMPL_CACHE
+)
+AutoModelForSequenceClassification.from_pretrained(
+    "MiriUll/distilbert-german-text-complexity", cache_dir=KOMPL_CACHE
+)
 PY
-# Make the cache readable for any uid the runtime container ends up running as.
-RUN chmod -R a+rX /opt/huggingface
+# Make the caches readable for any uid the runtime container ends up running as.
+RUN chmod -R a+rX /opt/huggingface /app/regeln/komplexitaet
 
 # Layer 3: ML models from GitHub Releases (cached unless manifest changes).
 # If MODEL_MANIFEST.json points to a private repo, pass a token via BuildKit secret:
@@ -87,7 +105,7 @@ COPY --from=builder /app/regeln/ ./regeln/
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 CMD ["uvicorn", "api_main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -19,7 +19,11 @@ import uvicorn  # noqa: E402
 from fastapi import FastAPI, HTTPException, Query  # noqa: E402
 from pydantic import BaseModel, ConfigDict, Field  # noqa: E402
 
-from analysis_service import analyse_text, get_loaded_rule_count  # noqa: E402
+from analysis_service import (  # noqa: E402
+    analyse_text,
+    get_loaded_rule_count,
+    get_loaded_rules,
+)
 
 # Generator imports (optional - only if pydantic-ai and LLM provider packages are available)
 try:
@@ -799,16 +803,13 @@ async def api_info():
     import os
 
     try:
-        # Test analysis to discover available rules
-        test_result = analyse_text("Test für Regel-Discovery.")
-
-        if "error" in test_result:
-            available_rules = []
-        else:
-            # Extract available rules from statistics
-            available_rules = list(
-                test_result.get("statistics", {}).get("violations_by_rule", {}).keys()
-            )
+        # Ask the analyzer singleton directly which rules loaded, rather than
+        # inferring from a probe analysis — short test texts trip zero rules
+        # and used to make /info wrongly report "Keine Regeln geladen".
+        loaded_rules = get_loaded_rules()
+        available_rules = (
+            loaded_rules if loaded_rules else "Keine Regeln geladen"
+        )
 
         return {
             "api_name": "Leichte Sprache API",
@@ -822,9 +823,8 @@ async def api_info():
                 "/docs": "GET - Interactive API Documentation (Swagger UI)",
                 "/redoc": "GET - Alternative API Documentation",
             },
-            "verfuegbare_regeln": available_rules
-            if available_rules
-            else "Keine Regeln geladen",
+            "verfuegbare_regeln": available_rules,
+            "regeln_anzahl": len(loaded_rules),
             "format_optionen": {
                 "full": "Vollständige Analyse mit Statistics und Issues",
                 "annotated_text": "Nur annotierter Text",

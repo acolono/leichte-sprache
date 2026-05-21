@@ -130,6 +130,21 @@ class SimpleLangAnalyzer:
             self._load_rules()
         return len(self.rules)
 
+    def get_loaded_rules(self) -> Dict[str, str]:
+        """
+        Return a mapping of loaded rule names to their human-readable descriptions.
+
+        Rules that loaded but have no description in `_rule_descriptions` fall back
+        to an empty string so the caller can rely on every loaded rule being present
+        in the returned dict.
+        """
+        if not self.rules:
+            self._load_rules()
+        return {
+            name: self._rule_descriptions.get(name, "")
+            for name in sorted(self.rules.keys())
+        }
+
     def _extract_problematic_terms(
         self, message: str, text: str
     ) -> List[Tuple[str, int, int]]:
@@ -528,6 +543,14 @@ def get_loaded_rule_count() -> int:
     if _analyzer is None:
         _analyzer = SimpleLangAnalyzer()
     return _analyzer.get_loaded_rule_count()
+
+
+def get_loaded_rules() -> Dict[str, str]:
+    """Public API helper — returns {rule_name: description} for every loaded rule."""
+    global _analyzer
+    if _analyzer is None:
+        _analyzer = SimpleLangAnalyzer()
+    return _analyzer.get_loaded_rules()
 
 
 if __name__ == "__main__":

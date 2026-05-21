@@ -40,7 +40,14 @@ DOCKER_BUILDKIT=1 docker build \
   -t leichte-sprache-rulez-api:latest .
 
 # 3. Starten und Health-Check
-docker compose up -d && sleep 45 && curl http://localhost:8000/health
+docker compose up -d && sleep 90 && curl http://localhost:8000/health
+```
+
+Alternativ in einem Schritt (nutzt das in `compose.yaml` deklarierte Build-Secret):
+
+```bash
+cp .env.example .env && export GITHUB_TOKEN=$(gh auth token)
+docker compose build && docker compose up -d
 ```
 
 Erwartete Antwort:
@@ -119,7 +126,7 @@ DOCKER_BUILDKIT=1 docker build \
   -t leichte-sprache-rulez-api:latest .
 ```
 
-> **Warum `docker build` und nicht `docker compose build`?** `docker compose build` akzeptiert derzeit keinen `--secret`-Flag auf der Kommandozeile — Build-Secrets müssen in `compose.yaml` deklariert werden. Der direkte `docker build`-Aufruf ist einfacher und erzeugt das Image `leichte-sprache-rulez-api:latest`, das `docker compose up` anschließend automatisch verwendet (der Service-Name in `compose.yaml` + der Projektname ergeben genau diesen Image-Tag).
+> **Hinweis zu `docker build` vs. `docker compose build`:** Die `compose.yaml` deklariert das `github_token`-Secret bereits — `docker compose build` (oder die implizite Build-Phase in `docker compose up`) funktioniert daher äquivalent, solange `$GITHUB_TOKEN` im Shell-Environment gesetzt ist. Der explizite `docker build`-Aufruf bleibt eine valide Alternative; er erzeugt denselben Image-Tag `leichte-sprache-rulez-api:latest`, der in `compose.yaml` via `image:` festgepinnt ist.
 
 Das Dockerfile bindet das Secret gezielt für einen einzelnen `RUN`-Befehl ein:
 
@@ -280,7 +287,39 @@ curl -X POST http://localhost:8000/generate \
 
 Die Antwort enthält den vereinfachten Text, die Anzahl Optimierungs-Iterationen, die finale Verstoßzahl und einen Treuescore (`faithfulness_score`) gegen den Ursprungstext.
 
-**Ollama lokal:** Nach `ollama run mistral-nemo:12b` auf dem Host den Container mit `OLLAMA_HOST=http://host.docker.internal:11434` in `.env` starten.
+### Ollama lokal (zwei Varianten)
+
+**Variante A — In-Network via Compose-Profil (empfohlen):**
+
+`compose.yaml` enthält ein optionales `ollama`-Profil mit einem Ollama-Server **im Compose-Netzwerk** plus einem One-Shot-Warmer, der das Default-Modell (`OLLAMA_DEFAULT_MODEL`, Standard `mistral-nemo:12b`) beim ersten Hochfahren zieht und im Named-Volume `ollama-data` persistiert.
+
+```bash
+# Compose bringt api + ollama + ollama-pull zusammen hoch.
+# Modell-Pull läuft beim ersten Start ~3–7 min (~7 GB).
+docker compose --profile ollama up -d
+
+# Anschließend Generierung gegen das lokale Modell:
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"text":"…","provider":"ollama"}'
+```
+
+`compose.yaml` überschreibt `OLLAMA_HOST`/`OLLAMA_BASE_URL` automatisch auf `http://ollama:11434` — der Wert in `.env` ist nur für Bare-Metal-Läufe relevant. Der Ollama-Port wird **nicht** auf den Host gemappt, um Konflikte mit einem evtl. lokal installierten Ollama zu vermeiden. Sauberes Aufräumen inkl. heruntergeladener Modelle: `docker compose --profile ollama down -v`.
+
+Disk-Bedarf mit aktivem Profil: ~12 GB Image + ~7 GB Modell = **~19 GB**.
+
+**Variante B — Host-Ollama:**
+
+Wer bereits eine Ollama-Installation auf dem Host betreibt (`brew install ollama` o. Ä.), kann den Container darauf zeigen:
+
+```bash
+ollama run mistral-nemo:12b           # einmal pullen + warm halten
+# in .env:
+OLLAMA_HOST=http://host.docker.internal:11434
+docker compose up -d --force-recreate
+```
+
+Beide Varianten erfordern **keinen** API-Key.
 
 ---
 

@@ -84,9 +84,11 @@ class BaseMLRule(ABC):
             try:
                 cls._model = cls._load_model()
             except Exception as e:
-                cls._error = f"{cls.__name__}: {e}"
-                logger.warning(
-                    "Failed to load model for %s: %s", cls.__name__, e
+                cls._error = f"{cls.__name__}: {type(e).__name__}: {e}"
+                # logger.exception emits the full traceback at WARNING level —
+                # opaque "stat: path … NoneType" wrappers are useless without it.
+                logger.exception(
+                    "Failed to load model for %s", cls.__name__
                 )
                 cls._model = None
             finally:
