@@ -405,6 +405,37 @@ docker compose --profile traefik up -d
 docker compose --profile traefik down -v
 ```
 
+### Hinweis zur Traefik-Version
+
+Das Profil verwendet `traefik:v3.7`. Diese Version (genauer: alles ab v3.6.1 sowie v2.11.31+) implementiert **Docker-API-Versions-Negotiation** und ist damit kompatibel mit Docker Engine 29.x, das die Mindest-API auf v1.44+ angehoben hat. Frühere Traefik-Releases hängen auf v1.24 fest und scheitern auf neuen Docker-Daemons mit der irreführenden Fehlermeldung `Error response from daemon:` (leerer Body). Die Negotiation funktioniert mit jedem Daemon zwischen Docker 18.09 und 29+ — eine Konfiguration für macOS Docker Desktop und Linux Docker Engine.
+
+### Optional: Härten via Docker-Socket-Proxy
+
+Im Default-Setup mountet der `traefik`-Container `/var/run/docker.sock` direkt (read-only). Für Mehrbenutzer- oder Shared-Host-Deployments empfiehlt sich ein **Socket-Proxy** dazwischen, sodass Traefik nur Container-Labels lesen kann und keinen Zugriff auf API-Endpunkte hat, die zum Erstellen privilegierter Container missbraucht werden könnten. Bewährte Optionen:
+
+- `tecnativa/docker-socket-proxy` — HAProxy-basiert, weit verbreitet
+- `wollomatic/socket-proxy` — Go-basiert, aktiver gepflegt, Regex-Filter
+
+Snippet zum Einfügen in `compose.yaml` unter dem `traefik`-Profil (Beispiel mit Tecnativa):
+
+```yaml
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    profiles: ["traefik"]
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      INFO: 1
+      VERSION: 1
+      EVENTS: 1
+      SWARM: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+```
+
+Anschließend im `traefik`-Service den Socket-Mount entfernen, das Flag `--providers.docker.endpoint=tcp://docker-socket-proxy:2375` hinzufügen und `docker-socket-proxy` als `depends_on` ergänzen.
+
 ---
 
 ## Entwicklung ohne Docker
