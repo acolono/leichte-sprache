@@ -320,9 +320,9 @@ class GenerateRequest(BaseModel):
     )
     model: Optional[str] = Field(
         default=None,
-        description="LLM-Modell (z.B. 'gpt-5-nano' für OpenAI, 'gemini-3-flash' für Google)",
+        description="LLM-Modell (z.B. 'gpt-5-mini' für OpenAI, 'claude-haiku-4-5-20251001' für Anthropic, 'gemini-3-flash' für Google)",
         json_schema_extra={
-            "example": "gpt-5-nano",
+            "example": "gpt-5-mini",
         },
     )
     max_seconds: float = Field(
@@ -600,27 +600,26 @@ async def analyse_text_endpoint(
     - `anthropic`: Erfordert ANTHROPIC_API_KEY Umgebungsvariable
 
     **Verfügbare Modelle:**
-    - OpenAI: `gpt-5-nano` (Standard), `gpt-5-mini`, `gpt-5.2`, `gpt-oss-120b`
+    - OpenAI: `gpt-5-mini` (Standard, höchste HIX-Lesbarkeit), `gpt-5-nano` (schneller, konservativer)
+    - Anthropic: `claude-haiku-4-5-20251001` (Standard, beste Latenz-Qualität-Balance), `claude-sonnet-4-5-20250929`, `claude-opus-4-6`
+    - Mistral: `mistral-medium-latest` (Standard, kürzeste Antwortzeit), `mistral-large-latest`, `mistral-small-latest`
     - Google: `gemini-3-flash` (Standard), `gemini-3-pro`
     - Ollama: `mistral-nemo:12b` (Standard), `llama3:8b`, `llama3.1:8b`
-    - Mistral: `mistral-medium-latest` (Standard), `mistral-large-latest`, `mistral-small-latest`
-    - Anthropic: `claude-sonnet-4-5-20250929` (Standard), `claude-opus-4-6`, `claude-haiku-4-5-20251001`
 
     **Parameter:**
     - `text`: Der zu transformierende Text (max. 10.000 Zeichen)
-    - `max_iterations`: Maximale Verbesserungsrunden (1-15, Standard: 10)
     - `target_violations`: Stoppt bei dieser Anzahl Verstöße (0-10, Standard: 2)
-    - `provider`: LLM-Provider ('openai', 'google', 'ollama', 'mistral' oder 'anthropic', Standard: 'openai')
+    - `max_seconds`: Wall-Clock-Budget (5-300 s, Standard: 90). Ueberschritten? Bestes Zwischenresultat wird zurueckgegeben.
+    - `provider`: LLM-Provider ('openai', 'anthropic', 'mistral', 'google', 'ollama', Standard: 'openai')
     - `model`: LLM-Modell (optional, verwendet Provider-Standard)
+    - `max_iterations`: (deprecated, ignoriert) — Pipeline-Terminierung folgt `target_violations` + `max_seconds`.
 
-    **Eskalations-Strategien:**
-    Wenn keine Verbesserung mehr erzielt wird, eskaliert das System automatisch:
-    - Level 0 (Normal): Alle Regeln, Standard-Temperatur
-    - Level 1 (Fokussiert): Top 5 priorisierte Verstöße
-    - Level 2 (Hohe Temperatur): Kreativere Lösungen (Temp 0.9)
-    - Level 3 (Regel-für-Regel): Fokus auf eine Regel-Kategorie
+    **Pipeline (seit Refactor 2026-05-22):**
+    - Stage A — Restrukturierung: 1 LLM-Aufruf, voller Text rein, freie Umformulierung raus.
+    - Stage B — Satzweise Politur: nur Saetze mit verbleibenden Verstoessen werden einzeln umformuliert.
+    - Stage C — Verifikation: deterministische Regelpruefung + HIX + Treue-Bewertung. Bei Treue < 4 wird Stage A bis zu 2x mit Feedback wiederholt.
 
-    **Hinweis:** Die Generierung kann je nach Textlänge und Modell einige Sekunden dauern.
+    **Hinweis:** Die Generierung dauert je nach Modell und Textlaenge ~10-120 s. Schnellster Pfad bei bereits einfachen Texten: ~10 s.
     """,
 )
 async def generate_simple_lang(request: GenerateRequest):

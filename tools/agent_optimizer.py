@@ -108,9 +108,13 @@ LLM_PROVIDER_MISTRAL = "mistral"
 LLM_PROVIDER_ANTHROPIC = "anthropic"
 LLM_PROVIDER_GOOGLE = "google"
 
-# Available models per provider
+# Available models per provider.
+# `gpt-5.2` and `gpt-oss-120b` were removed after a 2026-05-22 matrix test
+# proved they are not callable via api.openai.com — gpt-5.2 does not exist
+# and gpt-oss-120b is an open-weights model hosted by third-party providers
+# only. Requesting them previously crashed the singleton optimizer mid-call.
 AVAILABLE_MODELS = {
-    LLM_PROVIDER_OPENAI: ["gpt-5-nano", "gpt-5-mini", "gpt-5.2", "gpt-oss-120b"],
+    LLM_PROVIDER_OPENAI: ["gpt-5-mini", "gpt-5-nano"],
     LLM_PROVIDER_OLLAMA: ["mistral-nemo:12b", "llama3:8b", "llama3.1:8b"],
     LLM_PROVIDER_MISTRAL: [
         "mistral-medium-latest",
@@ -118,9 +122,9 @@ AVAILABLE_MODELS = {
         "mistral-small-latest",
     ],
     LLM_PROVIDER_ANTHROPIC: [
+        "claude-haiku-4-5-20251001",
         "claude-sonnet-4-5-20250929",
         "claude-opus-4-6",
-        "claude-haiku-4-5-20251001",
     ],
     LLM_PROVIDER_GOOGLE: ["gemini-3-flash", "gemini-3-pro"],
 }
@@ -134,12 +138,15 @@ JUDGE_MODELS = {
     LLM_PROVIDER_GOOGLE: "gemini-3-flash",
 }
 
-# Default models for each provider
+# Default models for each provider. OpenAI default was promoted from
+# gpt-5-nano → gpt-5-mini after the 2026-05-22 matrix test: gpt-5-mini
+# produced HIX 18.15 ("easy", the highest rating) vs gpt-5-nano's 13.01
+# ("readable"), with comparable faithfulness and acceptable latency.
 DEFAULT_MODELS = {
-    LLM_PROVIDER_OPENAI: "gpt-5-nano",
+    LLM_PROVIDER_OPENAI: "gpt-5-mini",
     LLM_PROVIDER_OLLAMA: "mistral-nemo:12b",
     LLM_PROVIDER_MISTRAL: "mistral-medium-latest",
-    LLM_PROVIDER_ANTHROPIC: "claude-sonnet-4-5-20250929",
+    LLM_PROVIDER_ANTHROPIC: "claude-haiku-4-5-20251001",
     LLM_PROVIDER_GOOGLE: "gemini-3-flash",
 }
 
@@ -538,7 +545,7 @@ class AgentOptimizer:
         self.prompts_dir = Path(prompts_dir)
         self.prompts_dir.mkdir(exist_ok=True)
         self.llm_provider = llm_provider
-        self.llm_model = llm_model or DEFAULT_MODELS.get(llm_provider, "gpt-5-nano")
+        self.llm_model = llm_model or DEFAULT_MODELS.get(llm_provider, "gpt-5-mini")
         self.regeln_dir = regeln_dir or Path(__file__).parent.parent / "regeln"
 
         self._model = _create_model(llm_provider, self.llm_model)
