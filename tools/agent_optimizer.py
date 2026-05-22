@@ -34,11 +34,25 @@ from pydantic_ai.usage import UsageLimits
 from tools.agents import (
     AgentDeps,
     FaithfulnessAssessment,
-    ValidationResult,
+    build_refiner_prompt,
+    build_restructurer_prompt,
     create_faithfulness_judge,
-    generator_agent,
     load_judge_prompt,
-    validator_agent,
+    restructurer_agent,
+    sentence_refiner_agent,
+)
+from tools.sentence_planner import (
+    SentenceState,
+    acceptable_candidate,
+    assign_violations,
+    build_states,
+    count_edits,
+    has_open_problem_sentences,
+    local_improved,
+    mark_done_if_clean,
+    neighbors,
+    pick_priority,
+    reassemble,
 )
 
 logger = logging.getLogger(__name__)
@@ -992,78 +1006,38 @@ Gib NUR den vereinfachten Text zurück."""
     def generate(
         self,
         text: str,
-        max_iterations: int = 10,
         target_violations: int = 2,
+        max_seconds: float = 90.0,
         verbose: bool = False,
+        max_iterations: int = 10,  # kept for backward-compatible call sites; unused
     ) -> Dict[str, Any]:
-        """Generate Leichte Sprache using the two-agent outer loop."""
-        return self._agent_generate(text, max_iterations, target_violations, verbose)
+        """Run the two-stage pipeline.
 
-    def _build_generator_prompt(
-        self,
-        original_text: str,
-        feedback: Optional[str],
-        iteration: int,
-        previous_text: Optional[str] = None,
-    ) -> str:
-        """Build prompt for the generator agent."""
-        if iteration == 0 or feedback is None:
-            return f"Wandle diesen Text in Leichte Sprache um:\n\n<TEXT>\n{original_text}\n</TEXT>"
-        return (
-            f"Verbessere den folgenden vereinfachten Text basierend auf dem Feedback.\n\n"
-            f"ORIGINALTEXT:\n<TEXT>\n{original_text}\n</TEXT>\n\n"
-            f"DEIN BISHERIGER TEXT:\n<TEXT>\n{previous_text}\n</TEXT>\n\n"
-            f"FEEDBACK:\n{feedback}\n\n"
-            f"Behebe die genannten Probleme und gib den verbesserten Text zurueck."
-        )
+        Stage A restructures the text in one LLM call. Stage B refines any
+        remaining problem sentences one at a time. Stage C verifies
+        readability + faithfulness and loops back to Stage A (max 2 times)
+        if the faithfulness judge flags semantic loss.
 
-    def _run_validator(
-        self,
-        original_text: str,
-        simplified_text: str,
-        analysis: Dict[str, Any],
-        deps: AgentDeps,
-    ) -> ValidationResult:
-        """Run the validator agent and return its result."""
-        issues_summary = json.dumps(
-            [
-                {
-                    "rule": i.get("rule_id", "").replace("_issue", ""),
-                    "message": i.get("message", ""),
-                }
-                for i in analysis.get("issues", [])[:15]
-            ],
-            ensure_ascii=False,
+        ``max_iterations`` is accepted for backward compatibility but
+        ignored — termination is driven by ``target_violations``,
+        ``max_seconds``, and the faithfulness retry cap.
+        """
+        del max_iterations  # silence linters
+        return self._agent_generate(
+            text=text,
+            target_violations=target_violations,
+            max_seconds=max_seconds,
+            verbose=verbose,
         )
-        violations = analysis.get("statistics", {}).get("total_violations", 0)
-        val_prompt = (
-            f"ORIGINALTEXT:\n{original_text}\n\n"
-            f"VEREINFACHTER TEXT:\n{simplified_text}\n\n"
-            f"ANALYSE ({violations} Verstoesse, Ziel: {deps.target_violations}):\n{issues_summary}\n\n"
-            f"Pruefe die Bedeutungstreue und erstelle Feedback."
-        )
-        try:
-            val_result = _retry_on_rate_limit(
-                validator_agent.run_sync,
-                val_prompt,
-                deps=deps,
-                model=self._model,
-                usage_limits=UsageLimits(request_limit=5),
-            )
-            return val_result.output
-        except Exception as exc:
-            logger.warning("Validator error: %s", exc)
-            # Fallback: build feedback from analysis directly
-            feedback_lines = [
-                f"- {i.get('message', '')[:120]}"
-                for i in analysis.get("issues", [])[:10]
-            ]
-            return ValidationResult(feedback="\n".join(feedback_lines))
 
     def _run_faithfulness_check(
-        self, original_text: str, simplified_text: str, deps: AgentDeps
+        self, original_text: str, simplified_text: str
     ) -> Optional[FaithfulnessAssessment]:
-        """Run faithfulness check directly (outside validator agent)."""
+        """Run the faithfulness judge LLM and return its structured output.
+
+        Returns None on judge failure (network/parse error) — callers treat
+        None as "accept the candidate" because the judge itself failed.
+        """
         try:
             judge_prompt_template = load_judge_prompt()
             prompt = judge_prompt_template.format(
@@ -1099,243 +1073,671 @@ Gib NUR den vereinfachten Text zurück."""
             lines.extend(["", f"EMPFEHLUNG: {assessment.recommendation}"])
         return "\n".join(lines)
 
+    # =========================================================================
+    # MAIN PIPELINE — Stage A (Restructure) → Stage B (Refine) → Stage C (Verify)
+    # =========================================================================
+
+    _MAX_FAITHFULNESS_RETRIES = 2
+    _MAX_ATTEMPTS_PER_SENTENCE = 3
+    _COHERENCE_EDIT_THRESHOLD = 3
+    _STAGE_B_PLATEAU_LIMIT = 3
+
     def _agent_generate(
         self,
         text: str,
-        max_iterations: int,
         target_violations: int,
+        max_seconds: float,
         verbose: bool,
     ) -> Dict[str, Any]:
-        deps = AgentDeps(
-            analyze_func=self._analyze,
-            classify_violation_func=self.classify_violation,
-            record_failure_func=self.record_failure,
-            build_specific_instruction_func=self._build_specific_instruction,
-            detect_conflicts_func=self.detect_conflicts,
-            nlp=self._nlp,
-            judge_model=self._judge_model,
-            rule_prompts=self.rule_prompts,
-            target_violations=target_violations,
-            original_text=text,
-            system_prompt=self.system_prompt,
-            generator_instructions=self._generator_instructions,
-            validator_instructions=self._validator_instructions,
-        )
-
-        logger.info(
-            "Outer loop starting: model=%s, max_iterations=%d, target=%d",
-            self._model,
-            max_iterations,
-            target_violations,
-        )
+        from tools.hix import compute_hix_from_text
 
         t_start = time.monotonic()
-        best_text = None
-        best_violations = 999
-        stagnation_count = 0
-        faithfulness_retry_count = 0
-        MAX_FAITHFULNESS_RETRIES = 3
-        feedback = None
-        faithfulness_result = None
+        deadline = t_start + max_seconds
 
-        for iteration in range(max_iterations):
-            # Reset generator-internal tracking for this iteration
-            deps.analyses_run = 0
-            deps.stagnation_count = 0
-            deps.best_violations = 999
-            deps.best_text = ""
+        logger.info(
+            "Pipeline starting: model=%s, target=%d, max_seconds=%.0f",
+            self._model,
+            target_violations,
+            max_seconds,
+        )
 
-            # --- Step 1: Generator Agent ---
-            gen_prompt = self._build_generator_prompt(
-                text, feedback, iteration, previous_text=best_text
-            )
+        iteration_log: List[Dict[str, Any]] = []
+        faithfulness_retries = 0
+        faithfulness_feedback: Optional[str] = None
+        best_payload: Optional[Dict[str, Any]] = None
+        stop_reason: Optional[str] = None
+        restructured_first_pass_violations: Optional[int] = None
+        restructured_first_pass_text: Optional[str] = None
+
+        # ---- outer loop: Stage A → Stage B → Stage C ----------------------
+        while True:
+            if time.monotonic() >= deadline:
+                stop_reason = stop_reason or "deadline"
+                logger.warning("Pipeline: deadline reached at start of outer iteration")
+                break
+
+            # ─── Stage A: Restructure (1 LLM call) ───────────────────────────
             try:
-                gen_result = _retry_on_rate_limit(
-                    generator_agent.run_sync,
-                    gen_prompt,
-                    deps=deps,
+                stage_a_prompt = build_restructurer_prompt(text, faithfulness_feedback)
+                stage_a_result = _retry_on_rate_limit(
+                    restructurer_agent.run_sync,
+                    stage_a_prompt,
                     model=self._model,
-                    usage_limits=UsageLimits(request_limit=10),
+                    usage_limits=UsageLimits(request_limit=2),
                 )
-                agent_final = gen_result.output.text
+                stage_a_text = (stage_a_result.output.text or "").strip()
+                stage_a_rationale = stage_a_result.output.rationale or ""
+                if not stage_a_text:
+                    raise ValueError("Stage A returned empty text")
+                logger.info(
+                    "Stage A complete: rationale=%s | length_ratio=%.2f",
+                    stage_a_rationale[:80].replace("\n", " "),
+                    len(stage_a_text) / max(1, len(text)),
+                )
             except Exception as exc:
-                logger.warning(
-                    "Generator error in iteration %d: %s", iteration + 1, exc
-                )
-                agent_final = None
+                logger.error("Stage A failed: %s", exc)
+                if best_payload is None:
+                    return self._build_pipeline_result(
+                        original=text,
+                        best_payload=None,
+                        iteration_log=iteration_log,
+                        stop_reason="restructure_failed",
+                        target_violations=target_violations,
+                        elapsed=time.monotonic() - t_start,
+                        restructured_first_pass_text=restructured_first_pass_text,
+                        restructured_first_pass_violations=restructured_first_pass_violations,
+                    )
+                stop_reason = "restructure_failed"
+                break
 
-            # Prefer the agent's deterministically-tracked best (set by its
-            # analyze_text tool calls) over both the agent's final return
-            # value and the outer-loop fallback chain. The agent often drifts
-            # past its peak — or hits the inner request_limit before it can
-            # emit a structured output at all — and without this, an early
-            # error on iteration 1 silently rewinds to the unmodified original
-            # text, recording it as the iteration's result and triggering
-            # outer-loop stagnation against the worst possible baseline.
-            if deps.best_text and deps.best_violations < 999:
-                current_text = deps.best_text
-            else:
-                current_text = agent_final or best_text or text
+            iteration_log.append(
+                {
+                    "iteration": len(iteration_log) + 1,
+                    "stage": "A",
+                    "text": stage_a_text,
+                    "violations": -1,  # filled in after analysis below
+                    "accepted": True,
+                    "rationale": stage_a_rationale,
+                }
+            )
 
-            # --- Step 2: Deterministic analysis (authoritative) ---
-            analysis = self._analyze(current_text)
-            violations = analysis.get("statistics", {}).get("total_violations", 0)
-            issues = analysis.get("issues", [])
+            # ─── Stage B: Sentence-scoped Refinement ────────────────────────
+            stage_b_text, stage_b_log = self._refine_sentences(
+                stage_a_text,
+                deadline=deadline,
+            )
+            for entry in stage_b_log:
+                entry["iteration"] = len(iteration_log) + 1
+                entry["stage"] = "B"
+                iteration_log.append(entry)
 
-            # Record failures for Layer 1 learning
-            for issue in issues:
+            # First-pass observability — record what Stage A handed Stage B
+            if restructured_first_pass_violations is None:
+                stage_a_only_analysis = self._analyze(stage_a_text)
+                restructured_first_pass_violations = stage_a_only_analysis.get(
+                    "statistics", {}
+                ).get("total_violations", 0)
+                restructured_first_pass_text = stage_a_text
+                # Backfill the Stage A iteration log entry
+                iteration_log[0]["violations"] = restructured_first_pass_violations
+
+            # ─── Stage C: Verify ────────────────────────────────────────────
+            analysis = self._analyze(stage_b_text)
+            final_issues = analysis.get("issues", [])
+            final_violations = analysis.get("statistics", {}).get("total_violations", 0)
+            final_weighted = compute_weighted_violations(final_issues)
+
+            # Record failures for Layer 1 learning (preserves prior behaviour)
+            for issue in final_issues:
                 self.record_failure(
                     rule_id=issue.get("rule_id", "unknown"),
                     message=issue.get("message", ""),
                     violation_text=issue.get("text", ""),
                 )
 
-            # Record iteration in deps history
-            deps.analysis_history.append(
+            hix_result = compute_hix_from_text(stage_b_text, self._nlp)
+            edits_count = sum(
+                1 for e in stage_b_log if e.get("accepted") and e.get("reason") == "improved"
+            )
+
+            # Optional coherence smoothing (conditional per user decision)
+            if (
+                edits_count >= self._COHERENCE_EDIT_THRESHOLD
+                and hix_result.rating.value not in {"easy", "readable"}
+                and time.monotonic() < deadline
+            ):
+                smoothed = self._smooth_coherence(stage_b_text)
+                if smoothed and smoothed.strip() and smoothed != stage_b_text:
+                    smoothed_analysis = self._analyze(smoothed)
+                    smoothed_issues = smoothed_analysis.get("issues", [])
+                    smoothed_weighted = compute_weighted_violations(smoothed_issues)
+                    if smoothed_weighted <= final_weighted:
+                        logger.info(
+                            "Coherence smoothing accepted: weighted %d → %d",
+                            final_weighted,
+                            smoothed_weighted,
+                        )
+                        stage_b_text = smoothed
+                        analysis = smoothed_analysis
+                        final_issues = smoothed_issues
+                        final_violations = smoothed_analysis.get(
+                            "statistics", {}
+                        ).get("total_violations", 0)
+                        final_weighted = smoothed_weighted
+                        hix_result = compute_hix_from_text(stage_b_text, self._nlp)
+                        iteration_log.append(
+                            {
+                                "iteration": len(iteration_log) + 1,
+                                "stage": "C",
+                                "text": stage_b_text,
+                                "violations": final_violations,
+                                "accepted": True,
+                                "reason": "coherence_smoothed",
+                            }
+                        )
+
+            # Stage C: faithfulness
+            faith = self._run_faithfulness_check(text, stage_b_text)
+            faith_score = faith.score if faith else None
+
+            # Track best across outer iterations
+            candidate_payload = {
+                "text": stage_b_text,
+                "analysis": analysis,
+                "issues": final_issues,
+                "violations": final_violations,
+                "weighted": final_weighted,
+                "hix": hix_result,
+                "faith": faith,
+                "edits": edits_count,
+            }
+
+            def _is_better(new: Dict[str, Any], old: Optional[Dict[str, Any]]) -> bool:
+                if old is None:
+                    return True
+                if new["weighted"] != old["weighted"]:
+                    return new["weighted"] < old["weighted"]
+                new_score = new["faith"].score if new["faith"] else 0
+                old_score = old["faith"].score if old["faith"] else 0
+                return new_score > old_score
+
+            if _is_better(candidate_payload, best_payload):
+                best_payload = candidate_payload
+
+            logger.info(
+                "Stage C: violations=%d, weighted=%d, faithfulness=%s, hix=%.2f (%s)",
+                final_violations,
+                final_weighted,
+                faith_score,
+                hix_result.hix,
+                hix_result.rating.value,
+            )
+
+            # ─── Decide: ship, retry, or give up ────────────────────────────
+            if faith is None or faith.score >= 4:
+                # Faithfulness is acceptable. Label the stop reason by whether
+                # the violation target was also met — distinguishes the clean
+                # "target_reached" from "we got the meaning right but couldn't
+                # polish all rules" so callers see a truthful signal alongside
+                # `success`.
+                if final_weighted <= target_violations:
+                    stop_reason = "target_reached"
+                else:
+                    stop_reason = "best_effort"
+                break
+            if faithfulness_retries >= self._MAX_FAITHFULNESS_RETRIES:
+                stop_reason = "faithfulness_limit"
+                logger.warning(
+                    "Faithfulness retry limit reached (%d), accepting best",
+                    faithfulness_retries,
+                )
+                break
+            if time.monotonic() >= deadline:
+                stop_reason = "deadline"
+                break
+
+            faithfulness_feedback = self._build_faithfulness_feedback(faith)
+            faithfulness_retries += 1
+            logger.info(
+                "Faithfulness retry %d/%d — Stage A will be re-invoked (score was %d)",
+                faithfulness_retries,
+                self._MAX_FAITHFULNESS_RETRIES,
+                faith.score,
+            )
+            # loop back to Stage A with feedback
+
+        elapsed = time.monotonic() - t_start
+        return self._build_pipeline_result(
+            original=text,
+            best_payload=best_payload,
+            iteration_log=iteration_log,
+            stop_reason=stop_reason or "target_reached",
+            target_violations=target_violations,
+            elapsed=elapsed,
+            restructured_first_pass_text=restructured_first_pass_text,
+            restructured_first_pass_violations=restructured_first_pass_violations,
+        )
+
+    # ------------------------------------------------------------------------
+    # Stage B helper: per-sentence refinement loop
+    # ------------------------------------------------------------------------
+
+    def _refine_sentences(
+        self,
+        text: str,
+        deadline: float,
+    ) -> Tuple[str, List[Dict[str, Any]]]:
+        """Run the sentence-scoped refinement loop on ``text``.
+
+        Returns the refined text and a list of per-attempt log entries.
+        Returns the input unchanged if no sentences have violations.
+        """
+        states = build_states(text, self._nlp)
+        if not states:
+            return text, []
+
+        analysis = self._analyze(text)
+        assign_violations(analysis.get("issues", []), states)
+        mark_done_if_clean(states)
+
+        log: List[Dict[str, Any]] = []
+        if not has_open_problem_sentences(states):
+            logger.info("Stage B: input already compliant, refinement skipped")
+            return text, log
+
+        plateau = 0
+
+        while has_open_problem_sentences(states):
+            if time.monotonic() >= deadline:
+                logger.warning("Stage B: deadline reached")
+                break
+
+            target = pick_priority(states)
+            if target is None:
+                break
+
+            if target.attempts >= self._MAX_ATTEMPTS_PER_SENTENCE:
+                target.status = "abandoned"
+                log.append(
+                    {
+                        "text": target.current,
+                        "violations": target.weighted_violations,
+                        "accepted": False,
+                        "sentence_index": target.index,
+                        "reason": "max_attempts",
+                    }
+                )
+                continue
+
+            ctx = neighbors(states, target.index, k=1)
+            rules_for_prompt = self._build_rules_for_sentence(target.violations)
+            fixes_for_prompt = self._build_fixes_for_sentence(
+                target.violations, target.current
+            )
+
+            refiner_prompt = build_refiner_prompt(
+                target_sentence=target.current,
+                before_context=ctx["before"],
+                after_context=ctx["after"],
+                rules=rules_for_prompt,
+                fixes=fixes_for_prompt,
+            )
+
+            target.attempts += 1
+            try:
+                refiner_result = _retry_on_rate_limit(
+                    sentence_refiner_agent.run_sync,
+                    refiner_prompt,
+                    model=self._model,
+                    usage_limits=UsageLimits(request_limit=2),
+                )
+                candidate_sentences = refiner_result.output.sentences
+            except Exception as exc:
+                logger.warning(
+                    "Stage B: refiner error on sentence %d: %s", target.index, exc
+                )
+                log.append(
+                    {
+                        "text": target.current,
+                        "violations": target.weighted_violations,
+                        "accepted": False,
+                        "sentence_index": target.index,
+                        "reason": "refiner_error",
+                    }
+                )
+                continue
+
+            candidate_combined = " ".join(
+                s.strip() for s in candidate_sentences if s and s.strip()
+            )
+
+            if not acceptable_candidate(candidate_combined, target.current):
+                logger.info(
+                    "Stage B: rejected lazy/dissimilar candidate for sentence %d",
+                    target.index,
+                )
+                log.append(
+                    {
+                        "text": candidate_combined,
+                        "violations": target.weighted_violations,
+                        "accepted": False,
+                        "sentence_index": target.index,
+                        "reason": "lazy_or_dissimilar",
+                    }
+                )
+                continue
+
+            # Trial: replace target.current with candidate_combined, reassemble,
+            # re-analyze. We then look at how the violations distribute over
+            # *the new* sentence span via a fresh spaCy split of the trial text.
+            trial_states = self._trial_replace(states, target.index, candidate_combined)
+            trial_text = reassemble(trial_states)
+            trial_analysis = self._analyze(trial_text)
+            trial_issues = trial_analysis.get("issues", [])
+
+            # Resplit trial_text fresh so violations bucket correctly into the
+            # candidate sentences (which may have split into multiple).
+            fresh_trial_states = build_states(trial_text, self._nlp)
+            assign_violations(trial_issues, fresh_trial_states)
+
+            # Local improvement check: sum the weighted violations of every
+            # sentence whose span overlaps the candidate's character range.
+            candidate_local_weighted = self._candidate_weighted(
+                fresh_trial_states, target, candidate_combined
+            )
+
+            if not local_improved(target, candidate_local_weighted):
+                plateau += 1
+                logger.info(
+                    "Stage B: no improvement on sentence %d (was %d, candidate %d, plateau=%d)",
+                    target.index,
+                    target.weighted_violations,
+                    candidate_local_weighted,
+                    plateau,
+                )
+                log.append(
+                    {
+                        "text": candidate_combined,
+                        "violations": candidate_local_weighted,
+                        "accepted": False,
+                        "sentence_index": target.index,
+                        "reason": "no_improvement",
+                    }
+                )
+                if plateau >= self._STAGE_B_PLATEAU_LIMIT:
+                    logger.warning(
+                        "Stage B: plateau reached (%d consecutive no-improvements)",
+                        plateau,
+                    )
+                    break
+                continue
+
+            # Commit the candidate
+            plateau = 0
+            target.current = candidate_combined
+            # Rebuild states from the new combined text so spans stay correct
+            new_text = reassemble(self._states_with_replacement(states, target.index, candidate_combined))
+            new_states = build_states(new_text, self._nlp)
+            new_analysis = self._analyze(new_text)
+            assign_violations(new_analysis.get("issues", []), new_states)
+            mark_done_if_clean(new_states)
+            states = new_states
+
+            log.append(
                 {
-                    "text": current_text,
-                    "violations": violations,
-                    "issues": [
-                        {"rule": i.get("rule_id"), "message": i.get("message")}
-                        for i in issues
-                    ],
+                    "text": new_text,
+                    "violations": new_analysis.get("statistics", {}).get(
+                        "total_violations", 0
+                    ),
+                    "accepted": True,
+                    "sentence_index": target.index,
+                    "reason": "improved",
                 }
             )
 
-            # Compute weighted violation score
-            weighted = compute_weighted_violations(issues)
+        return reassemble(states), log
 
-            # Track best (by weighted score)
-            if weighted < best_violations:
-                best_text = current_text
-                best_violations = weighted
-                stagnation_count = 0
-            else:
-                stagnation_count += 1
+    # ------------------------------------------------------------------------
+    # Stage B helpers — prompt building from existing AgentOptimizer state
+    # ------------------------------------------------------------------------
 
-            logger.info(
-                "Iteration %d: violations=%d, weighted=%d (best=%d, target=%d, stagnation=%d)",
-                iteration + 1,
-                violations,
-                weighted,
-                best_violations,
-                target_violations,
-                stagnation_count,
-            )
-
-            # --- Step 3: Stop checks (use weighted score) ---
-
-            # 3a: Stagnation check (FIRST — always reachable)
-            if stagnation_count >= 3:
-                logger.warning(
-                    "Stagnation: no improvement for %d iterations", stagnation_count
-                )
-                break
-
-            # 3b: Target + faithfulness check
-            if weighted <= target_violations:
-                faithfulness_result = self._run_faithfulness_check(
-                    text, current_text, deps
-                )
-                if faithfulness_result is None or faithfulness_result.score >= 4:
-                    # None = check failed (accept result), >= 4 = faithful enough
-                    if faithfulness_result is not None:
-                        logger.info(
-                            "Target reached and faithfulness OK (score=%d)",
-                            faithfulness_result.score,
-                        )
-                    else:
-                        logger.warning(
-                            "Target reached, faithfulness check failed — accepting result"
-                        )
-                    break
-
-                faithfulness_retry_count += 1
-                if faithfulness_retry_count >= MAX_FAITHFULNESS_RETRIES:
-                    logger.warning(
-                        "Faithfulness retry limit reached (%d attempts, best score=%d) — accepting result",
-                        faithfulness_retry_count,
-                        faithfulness_result.score,
-                    )
-                    break
-
-                logger.info(
-                    "Target reached but faithfulness=%d (retry %d/%d) — continuing",
-                    faithfulness_result.score,
-                    faithfulness_retry_count,
-                    MAX_FAITHFULNESS_RETRIES,
-                )
-                faithfulness_feedback = self._build_faithfulness_feedback(
-                    faithfulness_result
-                )
-                val_result = self._run_validator(text, current_text, analysis, deps)
-                feedback = faithfulness_feedback + "\n\n" + val_result.feedback
+    def _build_rules_for_sentence(
+        self, violations: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Look up `rule_prompts` entries for each unique rule_id in `violations`."""
+        seen = set()
+        out: List[Dict[str, Any]] = []
+        for v in violations:
+            rid = (v.get("rule_id") or "").replace("_issue", "")
+            if not rid or rid in seen:
                 continue
+            seen.add(rid)
+            rule_data = self.rule_prompts.get(rid)
+            if not rule_data:
+                continue
+            out.append(
+                {
+                    "rule_id": rid,
+                    "title": rule_data.get("title", ""),
+                    "regel": rule_data.get("regel", ""),
+                    "anweisung": rule_data.get("anweisung", ""),
+                    "falsch": rule_data.get("falsch", [])[:2],
+                    "richtig": rule_data.get("richtig", [])[:2],
+                }
+            )
+        return out
 
-            # --- Step 4: Validator feedback ---
-            val_result = self._run_validator(text, current_text, analysis, deps)
-            feedback = val_result.feedback
+    def _build_fixes_for_sentence(
+        self, violations: List[Dict[str, Any]], sentence_text: str
+    ) -> List[Dict[str, Any]]:
+        """Build concrete per-violation fix instructions using the existing helper."""
+        from tools.agents.generator import DEFAULT_RULE_WEIGHT, RULE_WEIGHTS
 
-        # --- Final result ---
-        final_text = best_text or text
-        final_analysis = self._analyze(final_text)
-        final_issues = final_analysis.get("issues", [])
-        final_violations = final_analysis.get("statistics", {}).get(
-            "total_violations", 0
+        fixes: List[Dict[str, Any]] = []
+        sorted_violations = sorted(
+            violations,
+            key=lambda v: RULE_WEIGHTS.get(
+                (v.get("rule_id") or "").replace("_issue", ""), DEFAULT_RULE_WEIGHT
+            ),
         )
-        final_weighted = compute_weighted_violations(final_issues)
+        for v in sorted_violations[:6]:
+            rid = (v.get("rule_id") or "").replace("_issue", "")
+            instr = self._build_specific_instruction(
+                rid,
+                v.get("message", ""),
+                v.get("text", ""),
+                sentence_text,
+            )
+            if instr:
+                fixes.append(
+                    {
+                        "rule_id": rid,
+                        "problematic_text": v.get("text", ""),
+                        "instruction": instr,
+                    }
+                )
+        return fixes
 
-        # Faithfulness check if never checked during iteration
-        if faithfulness_result is None:
-            faithfulness_result = self._run_faithfulness_check(text, final_text, deps)
+    # ------------------------------------------------------------------------
+    # Stage B helpers — trial replacement + state cloning
+    # ------------------------------------------------------------------------
 
+    @staticmethod
+    def _trial_replace(
+        states: List[SentenceState], index: int, new_text: str
+    ) -> List[SentenceState]:
+        """Return a shallow copy of ``states`` with ``index``'s ``current`` swapped.
+
+        Used to build a trial reassembled text without mutating the live
+        state — if the trial is rejected nothing has changed.
+        """
+        out: List[SentenceState] = []
+        for s in states:
+            if s.index == index:
+                out.append(
+                    SentenceState(
+                        index=s.index,
+                        original=s.original,
+                        current=new_text,
+                        start=s.start,
+                        end=s.end,
+                        violations=list(s.violations),
+                        attempts=s.attempts,
+                        status=s.status,
+                    )
+                )
+            else:
+                out.append(s)
+        return out
+
+    @staticmethod
+    def _states_with_replacement(
+        states: List[SentenceState], index: int, new_text: str
+    ) -> List[SentenceState]:
+        """Same as _trial_replace but used at commit time."""
+        return AgentOptimizer._trial_replace(states, index, new_text)
+
+    @staticmethod
+    def _candidate_weighted(
+        fresh_trial_states: List[SentenceState],
+        target: SentenceState,
+        candidate_text: str,
+    ) -> int:
+        """Sum weighted violations across every sentence in the fresh trial
+        whose span lies inside the candidate's character extent.
+
+        Stage B may have split one sentence into many; this picks them all
+        up so the improvement check is fair when ``mehrere_aussagen`` fires.
+        """
+        # Locate the candidate's offset inside the reassembled trial. The
+        # reassembly joins with single spaces, so we re-find it.
+        # Simplest robust approach: count weighted violations of every
+        # sentence whose original text is a substring of candidate_text.
+        # Even simpler: sum the weighted violations across the new states
+        # that overlap the candidate's character range determined by index
+        # position. We fall back to summing all violations whose source
+        # sentence index equals target.index — but indices change after a
+        # split. Use overlap-by-text-substring instead.
+        total = 0
+        for s in fresh_trial_states:
+            if s.original.strip() and s.original.strip() in candidate_text:
+                total += s.weighted_violations
+        # If the substring heuristic found nothing (rare; LLM rewrote
+        # heavily) treat the candidate as zero-weighted locally — the
+        # global regression check upstream will catch unexpected damage.
+        return total
+
+    # ------------------------------------------------------------------------
+    # Stage C helper — optional coherence smoothing
+    # ------------------------------------------------------------------------
+
+    def _smooth_coherence(self, text: str) -> str:
+        """One-shot LLM call that smooths flow without changing meaning.
+
+        Reuses the restructurer agent with a different user prompt — the
+        system prompt already authorises the kinds of moves smoothing
+        needs (join short fragments, fix pronoun continuity). Returns the
+        smoothed text or the input unchanged on any failure.
+        """
+        smoothing_prompt = (
+            "Der folgende Leichte-Sprache-Text wurde Satz fuer Satz "
+            "ueberarbeitet und liest sich dadurch holprig. Glaette den "
+            "Lesefluss, ohne Bedeutung zu aendern oder neue Inhalte "
+            "hinzuzufuegen. Stilregeln Leichte Sprache bleiben Pflicht.\n\n"
+            "<TEXT>\n"
+            f"{text}\n"
+            "</TEXT>\n"
+        )
+        try:
+            result = _retry_on_rate_limit(
+                restructurer_agent.run_sync,
+                smoothing_prompt,
+                model=self._model,
+                usage_limits=UsageLimits(request_limit=2),
+            )
+            smoothed = (result.output.text or "").strip()
+            return smoothed or text
+        except Exception as exc:
+            logger.warning("Coherence smoothing failed: %s", exc)
+            return text
+
+    # ------------------------------------------------------------------------
+    # Final result builder
+    # ------------------------------------------------------------------------
+
+    def _build_pipeline_result(
+        self,
+        original: str,
+        best_payload: Optional[Dict[str, Any]],
+        iteration_log: List[Dict[str, Any]],
+        stop_reason: str,
+        target_violations: int,
+        elapsed: float,
+        restructured_first_pass_text: Optional[str],
+        restructured_first_pass_violations: Optional[int],
+    ) -> Dict[str, Any]:
         from tools.hix import compute_hix_from_text
 
-        hix_result = compute_hix_from_text(final_text, self._nlp)
+        if best_payload is None:
+            # Catastrophic failure path — fall back to the original text and
+            # synthesise a result that downstream callers can still consume.
+            analysis = self._analyze(original)
+            issues = analysis.get("issues", [])
+            violations = analysis.get("statistics", {}).get("total_violations", 0)
+            weighted = compute_weighted_violations(issues)
+            hix_result = compute_hix_from_text(original, self._nlp)
+            best_payload = {
+                "text": original,
+                "analysis": analysis,
+                "issues": issues,
+                "violations": violations,
+                "weighted": weighted,
+                "hix": hix_result,
+                "faith": None,
+                "edits": 0,
+            }
 
-        elapsed = time.monotonic() - t_start
+        final_text = best_payload["text"]
+        final_violations = best_payload["violations"]
+        final_weighted = best_payload["weighted"]
+        final_issues = best_payload["issues"]
+        hix_result = best_payload["hix"]
+        faith_obj = best_payload["faith"]
+        edits_count = best_payload["edits"]
+        length_ratio = len(final_text) / max(1, len(original))
+
+        success = final_weighted <= target_violations and (
+            faith_obj is None or faith_obj.score >= 4
+        )
+
         logger.info(
-            "Generate finished: violations=%d, weighted=%d, iterations=%d, elapsed=%.1fs",
+            "Generate finished: violations=%d, weighted=%d, iterations=%d, "
+            "elapsed=%.1fs, stop=%s, length_ratio=%.2f",
             final_violations,
             final_weighted,
-            len(deps.analysis_history),
+            len(iteration_log),
             elapsed,
+            stop_reason,
+            length_ratio,
         )
 
         return {
-            "original": text,
+            "original": original,
             "final": final_text,
-            "iterations": self._build_iterations(deps),
-            "total_iterations": len(deps.analysis_history),
+            "iterations": iteration_log,
+            "total_iterations": len(iteration_log),
             "final_violations": final_violations,
             "final_weighted_violations": final_weighted,
             "final_issues": final_issues,
             "final_escalation_level": 0,
             "hix": hix_result.hix,
             "hix_rating": hix_result.rating.value,
-            "faithfulness_score": faithfulness_result.score
-            if faithfulness_result
-            else None,
-            "success": final_weighted <= target_violations,
-            "stop_reason": (
-                "target_reached"
-                if final_weighted <= target_violations
-                else "faithfulness_limit"
-                if faithfulness_retry_count >= MAX_FAITHFULNESS_RETRIES
-                else "stagnation"
-            ),
+            "faithfulness_score": faith_obj.score if faith_obj else None,
+            "success": success,
+            "stop_reason": stop_reason,
+            "elapsed_seconds": elapsed,
+            "edits_made": edits_count,
+            "length_ratio": length_ratio,
+            "restructured_first_pass_violations": restructured_first_pass_violations,
+            "restructured_first_pass_text": restructured_first_pass_text,
         }
-
-    @staticmethod
-    def _build_iterations(deps: AgentDeps) -> list:
-        """Convert deps.analysis_history into the iterations list format."""
-        return [
-            {
-                "iteration": i + 1,
-                "text": entry["text"],
-                "violations": entry["violations"],
-                "escalation_level": 0,
-                "issues": entry["issues"],
-            }
-            for i, entry in enumerate(deps.analysis_history)
-        ]

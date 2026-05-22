@@ -1,19 +1,36 @@
-"""Generator Agent — produces and improves Leichte Sprache text.
+"""Sentence Refiner Agent — Stage B of the two-stage /generate pipeline.
 
-Tools: analyze_text, get_rule_guidance, get_fix_suggestions
+Each invocation takes a single sentence (the target) plus its immediate
+neighbours and a structured list of rule violations + fix suggestions, and
+returns a refined version of just the target sentence. The orchestrator
+in `tools/agent_optimizer.py` calls this agent at most once per problem
+sentence per iteration; the agent itself does not iterate — there are no
+tools, no internal analyze loop, no exploration.
+
+Compared to the earlier multi-tool generator agent, the LLM no longer
+decides when to stop: the deterministic analyzer plus the orchestrator's
+plateau/attempt caps do that. Removing the tools collapses the inner
+loop from ``UsageLimits(request_limit=10)`` to effectively one call plus
+one retry budget — the dominant source of cost blowup in production.
+
+Stage A (full-text restructuring) is in `tools/agents/restructurer.py`.
+Stage C (faithfulness verification) lives in `tools/agents/faithfulness_judge.py`.
 """
 
-import json
+from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import List, Optional, Union
 
-from pydantic_ai import Agent, RunContext
-
-from tools.agents.deps import AgentDeps, GeneratedText
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 
 logger = logging.getLogger(__name__)
 
-# Rule importance weights (imported here for get_fix_suggestions sorting)
+
+# Rule importance weights, lifted from the previous generator implementation
+# so prompt sorting still matches. The orchestrator imports these when it
+# builds per-sentence fix lists.
 RULE_WEIGHTS = {
     "nebensaetze": 0,
     "satzlaenge": 0,
@@ -36,187 +53,152 @@ RULE_WEIGHTS = {
 }
 DEFAULT_RULE_WEIGHT = 15
 
-generator_agent = Agent(
-    "test",
-    deps_type=AgentDeps,
-    output_type=GeneratedText,
-)
 
+class RefinedSentence(BaseModel):
+    """Stage B's structured output.
 
-@generator_agent.system_prompt
-def system_prompt(ctx: RunContext[AgentDeps]) -> str:
-    instructions = ctx.deps.generator_instructions.format(
-        target_violations=ctx.deps.target_violations,
-    )
-    return ctx.deps.system_prompt + "\n" + instructions
-
-
-@generator_agent.tool
-def analyze_text(ctx: RunContext[AgentDeps], text: str) -> str:
-    """Analysiere Text auf Leichte-Sprache-Verstoesse.
-    Gibt zurueck: Anzahl Verstoesse, Ziel, Verbesserung, Details pro Verstoss.
-    MUSS nach jeder Textaenderung aufgerufen werden.
-
-    Args:
-        text: Der zu analysierende Text in Leichter Sprache
+    The candidate is a list because ``mehrere_aussagen`` violations are
+    often fixed by splitting one sentence into several. A pure one-to-one
+    rewrite is the common case — produce a single-element list.
     """
-    deps = ctx.deps
-    analysis = deps.analyze_func(text)
-    issues = analysis.get("issues", [])
-    stats = analysis.get("statistics", {})
 
-    violation_count = stats.get("total_violations", 0)
-    prev_violations = deps.best_violations if deps.analyses_run > 0 else None
-
-    # Track best text & stagnation
-    deps.analyses_run += 1
-    if violation_count < deps.best_violations:
-        deps.best_text = text
-        deps.best_violations = violation_count
-        deps.stagnation_count = 0
-    else:
-        deps.stagnation_count += 1
-
-    # Track persistent violations
-    for issue in issues:
-        rule_id = issue.get("rule_id", "").replace("_issue", "")
-        deps.persistent_violations[rule_id] = (
-            deps.persistent_violations.get(rule_id, 0) + 1
-        )
-
-    logger.info(
-        "Analysis %d: violations=%d (best=%d, target=%d), stagnation=%d",
-        deps.analyses_run,
-        violation_count,
-        deps.best_violations,
-        deps.target_violations,
-        deps.stagnation_count,
+    sentences: List[str] = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Der umformulierte Satz. Bei einem 'mehrere_aussagen'-Verstoss "
+            "darfst du ihn in mehrere kurze Saetze aufspalten — dann mehr "
+            "als ein Listen-Eintrag."
+        ),
     )
-
-    # Build enriched result (capped at 15 issues)
-    enriched_issues = [
-        {
-            "rule_id": iss.get("rule_id", "").replace("_issue", ""),
-            "text": iss.get("text", ""),
-            "message": iss.get("message", ""),
-            "fixability": deps.classify_violation_func(iss),
-        }
-        for iss in issues[:15]
-    ]
-
-    result: Dict[str, Any] = {
-        "total_violations": violation_count,
-        "target": deps.target_violations,
-        "violations_by_rule": stats.get("violations_by_rule", {}),
-        "issues": enriched_issues,
-    }
-
-    if prev_violations is not None:
-        delta = prev_violations - violation_count
-        if delta > 0:
-            result["improvement"] = f"+{delta} weniger Verstoesse"
-        elif delta == 0:
-            result["improvement"] = "keine Veraenderung"
-        else:
-            result["improvement"] = f"{-delta} mehr Verstoesse (Verschlechterung)"
-
-    # Stagnation warning
-    if deps.stagnation_count >= 3:
-        logger.warning(
-            "Agent stagnation: no improvement for %d analyses",
-            deps.stagnation_count,
-        )
-        result["warning"] = (
-            f"Keine Verbesserung seit {deps.stagnation_count} Analysen. "
-            "Akzeptiere verbleibende Verstoesse und gib dein Endergebnis zurueck."
-        )
-
-    return json.dumps(result, ensure_ascii=False)
-
-
-@generator_agent.tool
-def get_rule_guidance(ctx: RunContext[AgentDeps], rule_id: str) -> str:
-    """Hole Anweisungen, Falsch/Richtig-Beispiele und Muster fuer eine Regel.
-    Nutze dies wenn du nicht weisst wie du einen bestimmten Verstoss beheben kannst.
-
-    Args:
-        rule_id: Regel-ID, z.B. 'passiv_erkennung', 'nebensaetze', 'fremdwoerter'
-    """
-    clean_id = rule_id.replace("_issue", "")
-    logger.debug("Agent tool: get_rule_guidance — rule_id=%s", clean_id)
-    rule_data = ctx.deps.rule_prompts.get(clean_id)
-    if not rule_data:
-        return json.dumps({"error": f"Regel '{clean_id}' nicht gefunden"})
-    return json.dumps(
-        {
-            "rule_id": clean_id,
-            "title": rule_data.get("title", ""),
-            "regel": rule_data.get("regel", ""),
-            "anweisung": rule_data.get("anweisung", ""),
-            "muster": rule_data.get("muster", []),
-            "falsch": rule_data.get("falsch", []),
-            "richtig": rule_data.get("richtig", []),
-        },
-        ensure_ascii=False,
-    )
-
-
-@generator_agent.tool
-def get_fix_suggestions(ctx: RunContext[AgentDeps], text: str) -> str:
-    """Analysiere Text und liefere konkrete, priorisierte Aenderungsvorschlaege.
-    Teurer als analyze_text (macht Analyse + baut Anweisungen).
-    Nutze dies wenn du gezielte Anweisungen fuer verbleibende Verstoesse brauchst.
-
-    Args:
-        text: Der zu analysierende Text
-    """
-    deps = ctx.deps
-    logger.debug("Agent tool: get_fix_suggestions")
-
-    analysis = deps.analyze_func(text)
-    issues = analysis.get("issues", [])
-
-    if not issues:
-        return json.dumps({"suggestions": [], "message": "Keine Verstoesse gefunden."})
-
-    sorted_issues = sorted(
-        issues,
-        key=lambda iss: RULE_WEIGHTS.get(
-            iss.get("rule_id", "").replace("_issue", ""), DEFAULT_RULE_WEIGHT
+    rationale: str = Field(
+        default="",
+        description=(
+            "Kurze Debug-Notiz, was geaendert wurde. Nicht fuer den Endnutzer."
         ),
     )
 
-    suggestions: List[Dict[str, str]] = []
-    for iss in sorted_issues[:10]:
-        rule_id = iss.get("rule_id", "").replace("_issue", "")
-        message = iss.get("message", "")
-        problematic_text = iss.get("text", "")
 
-        instruction = deps.build_specific_instruction_func(
-            rule_id, message, problematic_text, text
-        )
-        if instruction:
-            suggestions.append(
-                {
-                    "rule_id": rule_id,
-                    "problematic_text": problematic_text,
-                    "instruction": instruction,
-                }
-            )
+_SYSTEM_PROMPT = """\
+Du bist Experte fuer Leichte Sprache nach DIN SPEC 33429. Deine Aufgabe ist
+es, **einen einzelnen Satz** so umzuformulieren, dass er die genannten
+Verstoesse behebt.
 
-    conflicts_raw: List[Tuple[Dict, Dict]] = deps.detect_conflicts_func(issues)
-    conflicts = [
-        {
-            "rule_1": c[0].get("rule_id", "").replace("_issue", ""),
-            "rule_2": c[1].get("rule_id", "").replace("_issue", ""),
-            "text": c[0].get("text", ""),
-            "hint": "Diese Verstoesse ueberlappen — behebe einen nach dem anderen.",
-        }
-        for c in conflicts_raw[:5]
-    ]
+Wichtige Regeln fuer diese Aufgabe:
 
-    result: Dict[str, Any] = {"suggestions": suggestions}
-    if conflicts:
-        result["conflicts"] = conflicts
+1. **Nur den Zielsatz aendern.** Der Kontext (Saetze davor/danach) ist
+   nur zur Information da, damit du Pronomen und Bezuege erhalten kannst.
+   Aendere den Kontext nicht.
 
-    return json.dumps(result, ensure_ascii=False)
+2. **Kernbedeutung erhalten.** Drop keine Fakten — Daten, Zahlen, Namen,
+   Betraege, Termine, Gesetze muessen erhalten bleiben. Wenn der Zielsatz
+   ein Verwaltungsdetail enthaelt, das ohne Bedeutungsverlust weggelassen
+   werden kann, darfst du es weglassen.
+
+3. **Behebe genau die genannten Verstoesse.** Erfinde keine zusaetzlichen
+   Probleme; deine Aenderungen muessen sich auf die uebergebene Verstoss-
+   Liste beziehen.
+
+4. **Bei `mehrere_aussagen`** darfst (und sollst) du den Zielsatz in
+   mehrere kurze Saetze aufteilen. Gib dann mehrere Listen-Eintraege
+   zurueck.
+
+5. **Keine Platzhalter, keine Kommentare, keine Ellipsen.** Niemals "[...]",
+   "unveraendert", "Rest bleibt gleich" o. ae. ausgeben. Wenn du den Satz
+   nicht verbessern kannst, gib ihn unveraendert zurueck — kein Platzhalter.
+
+6. **Stilregeln Leichte Sprache** (Pflicht in der Ausgabe):
+   - max. ca. 10 Woerter pro Satz
+   - eine Aussage pro Satz
+   - aktiv statt passiv
+   - keine Genitive, keine Konjunktive, wenn vermeidbar
+   - lange Komposita aufteilen ("Bundes-Regierung") oder ersetzen
+   - Zahlen als Ziffern
+
+Gib **ausschliesslich** die strukturierte Ausgabe zurueck — eine Liste
+mit dem umformulierten Satz (oder mehreren Saetzen bei Aufspaltung) plus
+optional eine kurze Debug-Notiz.
+"""
+
+
+sentence_refiner_agent: Agent[None, RefinedSentence] = Agent(
+    "test",
+    output_type=RefinedSentence,
+)
+
+
+@sentence_refiner_agent.system_prompt
+def _system_prompt() -> str:
+    return _SYSTEM_PROMPT
+
+
+def build_refiner_prompt(
+    target_sentence: str,
+    before_context: str,
+    after_context: str,
+    rules: List[dict],
+    fixes: List[dict],
+) -> str:
+    """Compose the user message for one Stage B call.
+
+    The orchestrator pre-computes:
+
+    * ``rules``  — one entry per rule whose violations land in the target
+      sentence: ``{"rule_id", "title", "anweisung", "falsch", "richtig"}``
+      pulled from the existing per-rule prompt.md files via
+      ``deps.rule_prompts``.
+    * ``fixes`` — concrete per-violation instructions built by
+      ``AgentOptimizer._build_specific_instruction``, sorted by rule weight.
+
+    Both go straight into the prompt — the LLM does not call any tool to
+    fetch them.
+    """
+    parts = ["<KONTEXT>"]
+    if before_context.strip():
+        parts.append("Davor:")
+        parts.append(before_context.rstrip())
+    parts.append("Zielsatz (NUR DIESEN aendern):")
+    parts.append(target_sentence)
+    if after_context.strip():
+        parts.append("Danach:")
+        parts.append(after_context.lstrip())
+    parts.append("</KONTEXT>\n")
+
+    if fixes:
+        parts.append("<KONKRETE-FIXES>")
+        for i, fix in enumerate(fixes, 1):
+            rule = fix.get("rule_id", "")
+            instr = fix.get("instruction", "")
+            parts.append(f"{i}. [{rule}] {instr}")
+        parts.append("</KONKRETE-FIXES>\n")
+
+    if rules:
+        parts.append("<REGEL-HINWEISE>")
+        for rule in rules:
+            rid = rule.get("rule_id", "")
+            anweisung = rule.get("anweisung") or rule.get("regel") or ""
+            falsch = rule.get("falsch") or []
+            richtig = rule.get("richtig") or []
+            parts.append(f"## {rid}")
+            if anweisung:
+                parts.append(anweisung.strip()[:400])
+            if falsch:
+                parts.append("Falsch: " + " | ".join(str(x)[:80] for x in falsch[:2]))
+            if richtig:
+                parts.append("Richtig: " + " | ".join(str(x)[:80] for x in richtig[:2]))
+        parts.append("</REGEL-HINWEISE>\n")
+
+    parts.append(
+        "Gib den umformulierten Zielsatz zurueck. Behebe die genannten "
+        "Verstoesse, bewahre die Kernaussage, aendere nur den Zielsatz."
+    )
+    return "\n".join(parts)
+
+
+__all__ = [
+    "RefinedSentence",
+    "sentence_refiner_agent",
+    "build_refiner_prompt",
+    "RULE_WEIGHTS",
+    "DEFAULT_RULE_WEIGHT",
+]

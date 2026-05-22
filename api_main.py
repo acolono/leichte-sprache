@@ -6,6 +6,7 @@ Exposes the service logic via HTTP.
 """
 
 import asyncio
+import hashlib
 import logging
 from collections import OrderedDict
 from contextlib import asynccontextmanager
@@ -57,6 +58,29 @@ generator_optimizer: Optional["AgentOptimizer"] = None
 # LRU cache for optimizers by provider+model (enables cross-request learning)
 _optimizer_cache: OrderedDict[str, "AgentOptimizer"] = OrderedDict()
 _OPTIMIZER_CACHE_MAX_SIZE = 5
+
+# ---------------------------------------------------------------------------
+# Single-flight coalescing for /generate
+#
+# Concurrent requests with an identical request-hash (text + provider + model +
+# target_violations + max_seconds) share one underlying optimizer run. The
+# second and third callers await the same in-flight Future the first caller
+# created. Cleared once the run completes (success or failure).
+# ---------------------------------------------------------------------------
+_inflight_generate: Dict[str, "asyncio.Future[Dict[str, Any]]"] = {}
+_inflight_lock = asyncio.Lock()
+
+
+def _generate_request_hash(
+    text: str,
+    provider: str,
+    model: Optional[str],
+    target_violations: int,
+    max_seconds: float,
+) -> str:
+    """Stable content hash for coalescing identical concurrent /generate calls."""
+    payload = f"{text}\0{provider}\0{model or ''}\0{target_violations}\0{max_seconds}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def get_optimizer(provider: str, model: Optional[str]) -> "AgentOptimizer":
@@ -301,6 +325,15 @@ class GenerateRequest(BaseModel):
             "example": "gpt-5-nano",
         },
     )
+    max_seconds: float = Field(
+        default=90.0,
+        ge=5.0,
+        le=300.0,
+        description=(
+            "Wall-Clock-Budget in Sekunden. Erreicht das Budget vor dem Ziel, "
+            "gibt die API das beste Zwischenresultat zurueck (stop_reason=deadline)."
+        ),
+    )
     debug: Literal["INFO", "WARN", "DEBUG"] = Field(
         default="INFO",
         description="Log-Level: INFO (Standard), WARN (nur Warnungen), DEBUG (Details)",
@@ -308,11 +341,34 @@ class GenerateRequest(BaseModel):
 
 
 class IterationDetail(BaseModel):
-    """Details einer einzelnen Iterations-Runde."""
+    """Details einer einzelnen Iterations-Runde.
+
+    Stage A (Restructure), Stage B (per-sentence Refine) und Stage C
+    (optional Coherence-Smoothing) erzeugen jeweils eigene Eintraege.
+    """
 
     iteration: int = Field(description="Nummer der Iteration (1-basiert)")
-    text: str = Field(description="Generierter Text in dieser Iteration")
-    violations: int = Field(description="Anzahl Verstöße nach dieser Iteration")
+    text: str = Field(description="Generierter Text nach diesem Schritt")
+    violations: int = Field(description="Anzahl Verstoesse nach diesem Schritt")
+    stage: Optional[Literal["A", "B", "C"]] = Field(
+        default=None,
+        description="Pipeline-Stage: A=Restructure, B=Refine, C=Coherence-Smoothing",
+    )
+    accepted: Optional[bool] = Field(
+        default=None,
+        description="Wurde der Vorschlag uebernommen? Nur fuer Stage B relevant.",
+    )
+    sentence_index: Optional[int] = Field(
+        default=None,
+        description="Bei Stage B: Index des umformulierten Satzes.",
+    )
+    reason: Optional[str] = Field(
+        default=None,
+        description=(
+            "Stage-B-Annotation: improved, no_improvement, "
+            "lazy_or_dissimilar, refiner_error, max_attempts, oder coherence_smoothed."
+        ),
+    )
 
 
 class GenerateResponse(BaseModel):
@@ -349,11 +405,41 @@ class GenerateResponse(BaseModel):
     )
     stop_reason: Optional[str] = Field(
         default=None,
-        description="Grund für das Ende der Iteration: 'target_reached' (Ziel erreicht), 'stagnation' (keine Verbesserung), 'faithfulness_limit' (Treue-Limit erreicht)",
+        description=(
+            "Grund fuer das Ende der Pipeline: "
+            "'target_reached' (Verstoss-Ziel + Treue erreicht), "
+            "'best_effort' (Treue OK aber Verstoss-Ziel nicht erreicht — "
+            "Pipeline hat das Beste gegeben), "
+            "'deadline' (Zeit-Budget erschoepft), "
+            "'faithfulness_limit' (Treue-Pruefung schlug 2x fehl), "
+            "'restructure_failed' (Stage A nicht aufrufbar)."
+        ),
         json_schema_extra={"example": "target_reached"},
     )
+    elapsed_seconds: Optional[float] = Field(
+        default=None,
+        description="Wall-Clock-Dauer dieser /generate-Anfrage in Sekunden.",
+    )
+    edits_made: Optional[int] = Field(
+        default=None,
+        description="Anzahl Saetze, die Stage B umformuliert hat.",
+    )
+    length_ratio: Optional[float] = Field(
+        default=None,
+        description=(
+            "len(result) / len(original). Leichte Sprache erreicht typisch ~0.3."
+        ),
+    )
+    restructured_first_pass_violations: Optional[int] = Field(
+        default=None,
+        description=(
+            "Verstoesse direkt nach Stage A (vor Stage B). Niedrige Werte "
+            "bedeuten, dass die Stage-B-Schleife wenig oder gar nicht laufen "
+            "musste."
+        ),
+    )
     iterations_detail: List[IterationDetail] = Field(
-        description="Details zu jeder Iteration"
+        description="Details zu jeder Pipeline-Stage und jedem Refinement-Versuch."
     )
     provider: str = Field(
         description="Verwendeter LLM-Provider",
@@ -621,8 +707,6 @@ async def generate_simple_lang(request: GenerateRequest):
             )
 
     try:
-        import time
-
         # Configure log levels based on debug parameter
         log_level = getattr(logging, request.debug)
         logging.getLogger("api_main").setLevel(log_level)
@@ -630,55 +714,78 @@ async def generate_simple_lang(request: GenerateRequest):
 
         verbose = request.debug != "WARN"
 
-        logger.info(
-            "Generate request: provider=%s, model=%s, max_iterations=%d, target_violations=%d",
+        request_hash = _generate_request_hash(
+            request.text,
             provider,
-            model or "default",
-            request.max_iterations,
+            model,
             request.target_violations,
+            request.max_seconds,
         )
 
-        # Get cached optimizer (singleton pattern for cross-request learning)
-        optimizer = get_optimizer(provider, model)
+        # ── Single-flight coalescing ─────────────────────────────────────
+        # Concurrent identical requests await the same Future instead of each
+        # running a full pipeline. The first request to arrive creates the
+        # Future, runs the optimizer in a thread, and resolves it on completion.
+        async with _inflight_lock:
+            inflight = _inflight_generate.get(request_hash)
+            is_leader = inflight is None
+            if is_leader:
+                loop = asyncio.get_event_loop()
+                inflight = loop.create_future()
+                _inflight_generate[request_hash] = inflight
 
-        logger.info(
-            "Using optimizer: %s (provider=%s, model=%s)",
-            type(optimizer).__name__,
-            optimizer.llm_provider,
-            optimizer.llm_model,
-        )
+        if not is_leader:
+            logger.info(
+                "Generate request: coalescing onto in-flight request_hash=%s",
+                request_hash[:12],
+            )
+            result = await inflight
+            optimizer = get_optimizer(provider, model)  # for response metadata only
+        else:
+            logger.info(
+                "Generate request: provider=%s, model=%s, target_violations=%d, max_seconds=%.0f, request_hash=%s",
+                provider,
+                model or "default",
+                request.target_violations,
+                request.max_seconds,
+                request_hash[:12],
+            )
+            optimizer = get_optimizer(provider, model)
+            logger.info(
+                "Using optimizer: %s (provider=%s, model=%s)",
+                type(optimizer).__name__,
+                optimizer.llm_provider,
+                optimizer.llm_model,
+            )
 
-        # Perform generation
-        t_start = time.monotonic()
-        result = await asyncio.to_thread(
-            optimizer.generate,
-            text=request.text,
-            max_iterations=request.max_iterations,
-            target_violations=request.target_violations,
-            verbose=verbose,
-        )
-        elapsed = time.monotonic() - t_start
-
-        logger.info(
-            "Generate finished: success=%s, violations=%d, iterations=%d, "
-            "stop_reason=%s, elapsed=%.1fs",
-            result["success"],
-            result["final_violations"],
-            result["total_iterations"],
-            result.get("stop_reason", "unknown"),
-            elapsed,
-        )
-
-        # Trigger Layer 1 learning periodically (after accumulating patterns)
-        total_failures = sum(optimizer.failure_stats.values())
-        if total_failures >= 50 and total_failures % 50 == 0:
             try:
-                optimizer.optimize_rule_prompts(min_failures=10)
-                logger.info(
-                    "Layer 1 optimization triggered (%d patterns)", total_failures
+                result = await asyncio.to_thread(
+                    optimizer.generate,
+                    text=request.text,
+                    target_violations=request.target_violations,
+                    max_seconds=request.max_seconds,
+                    verbose=verbose,
+                    max_iterations=request.max_iterations,  # backward-compat, ignored
                 )
-            except Exception as opt_err:
-                logger.warning("Layer 1 optimization failed: %s", opt_err)
+                inflight.set_result(result)
+            except BaseException as exc:
+                inflight.set_exception(exc)
+                raise
+            finally:
+                async with _inflight_lock:
+                    _inflight_generate.pop(request_hash, None)
+
+        # Trigger Layer 1 learning periodically (leader only)
+        if is_leader:
+            total_failures = sum(optimizer.failure_stats.values())
+            if total_failures >= 50 and total_failures % 50 == 0:
+                try:
+                    optimizer.optimize_rule_prompts(min_failures=10)
+                    logger.info(
+                        "Layer 1 optimization triggered (%d patterns)", total_failures
+                    )
+                except Exception as opt_err:
+                    logger.warning("Layer 1 optimization failed: %s", opt_err)
 
         # Build response
         return GenerateResponse(
@@ -692,11 +799,21 @@ async def generate_simple_lang(request: GenerateRequest):
             hix_rating=result.get("hix_rating"),
             faithfulness_score=result.get("faithfulness_score"),
             stop_reason=result.get("stop_reason"),
+            elapsed_seconds=result.get("elapsed_seconds"),
+            edits_made=result.get("edits_made"),
+            length_ratio=result.get("length_ratio"),
+            restructured_first_pass_violations=result.get(
+                "restructured_first_pass_violations"
+            ),
             iterations_detail=[
                 IterationDetail(
                     iteration=it["iteration"],
-                    text=it["text"],
-                    violations=it["violations"],
+                    text=it.get("text", ""),
+                    violations=it.get("violations", 0),
+                    stage=it.get("stage"),
+                    accepted=it.get("accepted"),
+                    sentence_index=it.get("sentence_index"),
+                    reason=it.get("reason"),
                 )
                 for it in result["iterations"]
             ],
