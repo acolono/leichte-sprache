@@ -1,10 +1,9 @@
-# Leichte Sprache Rulez
+# Leichte Sprache Tools
 
 > Deutsche NLP-API zur Prüfung von Leichter Sprache nach 18 Regeln. Mit LLM-Unterstützung für automatische Vereinfachung.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-compose-2496ED.svg)](https://docs.docker.com/compose/)
-[![Lizenz](https://img.shields.io/badge/lizenz-TBD-lightgrey.svg)](#lizenz)
 
 Leichte Sprache Rulez prüft deutsche Texte auf Verstöße gegen die Regeln der Leichten Sprache — Wortwahl, Satzlänge, Komposita, Fremdwörter, Passivkonstruktionen und mehr. Die REST-API liefert annotierten Text mit exakten Positionen und Begründungen pro Regel. Optional transformiert der `/generate`-Endpunkt komplexe Texte per LLM in Leichte Sprache.
 
@@ -569,10 +568,5 @@ uv run pytest                        # Unit- und Integrations-Tests
 
 Issues und Pull Requests sind willkommen. Ein `CONTRIBUTING.md` mit Details zum Entwicklungs-Workflow, Coding-Standards und Test-Anforderungen folgt.
 
-Für interne Architektur-Hinweise und Coding-Regeln der Beitragenden siehe [`CLAUDE.md`](CLAUDE.md) (enthält Konventionen für neue Regel-Module).
 
 ---
-
-## Lizenz
-
-Die Lizenz ist noch festzulegen. Bis dahin bitte vor produktivem Einsatz die Maintainer kontaktieren.
